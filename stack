@@ -1,0 +1,44 @@
+#!/bin/bash
+
+set -eu
+
+_USER="$(id -un)"
+
+ARG1=${1:---help}
+
+ARG2=${2:-""}
+
+ARG3=${3:-""}
+
+function Start_New_Browser
+{
+    printf "\n>>> STARTING NEW BROWSER INSTANCE FOR: ${@} <<<\n"
+    sudo docker-compose exec -d server firefox --new-instance "${@}"
+}
+
+function Open_Browser_Tab
+{
+    printf "\n>>> OPEN TAB IN BROWSER FOR: ${@} <<<\n"
+    sudo docker-compose exec -d server firefox "${@}"
+}
+
+function Start_User_Shell
+{
+    local _user="${1:-1000}"
+    local _shell="${2:-zsh}"
+
+    sudo docker-compose run --rm --service-ports -u "${_user}" server "${_shell}"
+}
+
+function Start_Root_Shell
+{
+    sudo docker-compose run --rm --service-ports -u 0 server
+}
+
+if [ "${ARG1}" == "shell" ]
+    then
+        Start_User_Shell "${ARG2}" "${ARG3}"
+        exit 0
+fi
+
+sudo docker-compose "${@}"

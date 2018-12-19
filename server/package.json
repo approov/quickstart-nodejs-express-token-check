@@ -1,0 +1,24 @@
+{
+  "name": "demo-shapes-server",
+  "version": "1.0.0",
+  "description": "Node Express version of the Approov demo shapes server.",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon src/server.js"
+  },
+  "author": "CriticalBlue.com",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "NodeJS-Token-Check": "file:../packages/NodeJS-Token-Check",
+    "cors": "^2.8.5",
+    "debug": "^4.1.0",
+    "dotenv": "^6.2.0",
+    "express": "^4.16.4",
+    "fs": "0.0.1-security",
+    "jsonwebtoken": "^8.4.0"
+  },
+  "devDependencies": {
+    "nodemon": "^1.18.9"
+  }
+}

@@ -1,0 +1,28 @@
+version: "2.1"
+
+services:
+
+  server:
+    image: ${IMAGE_NAME:-approov/node}
+    build:
+      context: docker/build
+    env_file:
+      - .env
+    devices:
+      - /dev/dri:/dev/dri
+    volumes:
+      - /dev/shm:/dev/shm
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ${ROOT_CA_SETUP_DIR:-./docker/build/setup}:/root-ca
+      - ${NODE_DIR:-./}:/home/node/workspace
+      - ~/.ssh:/home/node/.ssh
+      #- ~/.docker-node-demo/${PROJECT_HOST_DIR}/mitmproxy:/home/mitmproxy/.mitmproxy
+      #- ./docker/build/.mozilla:/home/node/.mozilla
+    ports:
+      - 127.0.0.1:4000:4000
+    networks:
+      - node_demo_network
+
+networks:
+  node_demo_network:
+    driver: "bridge"

@@ -1,0 +1,17 @@
+**/*.crt
+**/*.cert
+**/*.der
+**/*.pem
+**/*.key
+**/*.DS_Store
+node_modules/
+*.token
+*.time
+.idea/
+.local/
+.Trash-1000/
+/docker/build/.mozilla/firefox/*
+!.gitkeep
+*.token
+*.tok
+.env
