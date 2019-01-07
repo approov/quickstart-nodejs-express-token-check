@@ -11,7 +11,8 @@ node_modules/
 .local/
 .Trash-1000/
 /docker/build/.mozilla/firefox/*
-!.gitkeep
 *.token
 *.tok
 .env
+packages/
+!.gitkeep

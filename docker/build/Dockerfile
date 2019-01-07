@@ -1,5 +1,14 @@
 FROM ubuntu:18.04
 
+# Inspired on:
+#   → https://github.com/Purik/android-studio-docker
+#   → https://github.com/Deadolus/android-studio-docker
+
+ARG CONTAINER_USER="node"
+ARG CONTAINER_UID="1000"
+ARG DISPLAY=":0.0"
+ARG ZSH_THEME="robbyrussell"
+
 # Will not prompt for questions
 ENV DEBIAN_FRONTEND=noninteractive \
     CONTAINER_USER=node \
@@ -10,24 +19,17 @@ ENV DEBIAN_FRONTEND=noninteractive \
     ROOT_CA_NAME="ApproovStackRootCA" \
     PROXY_CA_FILENAME="ProxyCA.crt" \
     PROXY_CA_PEM="certificates/ProxyCA.crt" \
-    PROXY_CA_NAME="FirewallProxy"
+    PROXY_CA_NAME="FirewallProxy" \
+    DISPLAY=${DISPLAY} \
+    NO_AT_BRIDGE=1
 
-# Inspired on:
-#   → https://github.com/Purik/android-studio-docker
-#   → https://github.com/Deadolus/android-studio-docker
-
+# NO_AT_BRIDGE=1
 # Removes DBUS warning that should be only seen by Developer
 # https://bugs.launchpad.net/ubuntu/+source/at-spi2-core/+bug/1193236
-ENV NO_AT_BRIDGE=1
-
-# Will not prompt for questions
-ENV DEBIAN_FRONTEND=noninteractive
-
-ARG CONTAINER_USER="${CONTAINER_USER:-node}"
-ARG CONTAINER_UID="${CONTAINER_UID:-1000}"
 
 COPY ./setup ${ROOT_CA_DIR}
 COPY ./.mozilla /root/.mozilla
+COPY ./postman-config /root/postman-config
 
 RUN apt update && \
     apt -y upgrade && \
@@ -38,25 +40,19 @@ RUN apt update && \
       inotify-tools \
       libnss3-tools \
       curl \
-      # apt-utils \
       git \
       zsh \
       unzip \
-      #mitmproxy \
       nodejs \
       npm \
-      # nginx \
-      # xorg \
       nano \
-      # ant \
       firefox \
-      # build-essential \
+      libxss1 \
+      libgconf-2-4 \
       dbus* \
-      libcanberra-gtk*
-      # bridge-utils \
-      #libnotify4 \
+      libcanberra-gtk* && \
 
-RUN locale-gen en_GB.UTF-8 && \
+    locale-gen en_GB.UTF-8 && \
     dpkg-reconfigure locales && \
 
     #https://github.com/guard/listen/wiki/Increasing-the-amount-of-inotify-watchers
@@ -67,6 +63,10 @@ RUN locale-gen en_GB.UTF-8 && \
     mv /root/.mozilla /home/${CONTAINER_USER}/.mozilla && \
     chown -R ${CONTAINER_USER}:${CONTAINER_USER} /home/${CONTAINER_USER}/.mozilla && \
 
+    mkdir -p /home/${CONTAINER_USER}/.config && chown ${CONTAINER_USER}:${CONTAINER_USER} /home/${CONTAINER_USER}/.config && \
+    mv /root/postman-config /home/${CONTAINER_USER}/.config/Postman && \
+    chown -R ${CONTAINER_USER}:${CONTAINER_USER} /home/${CONTAINER_USER}/.config && \
+
     cd ${ROOT_CA_DIR} && \
     ./setup-root-certificate.sh "${ROOT_CA_KEY}" "${ROOT_CA_PEM}" "${ROOT_CA_NAME}" && \
     ./create-domain-certificate.sh "localhost" "${ROOT_CA_KEY}" "${ROOT_CA_PEM}" && \
@@ -74,16 +74,13 @@ RUN locale-gen en_GB.UTF-8 && \
     ./add-certificate-to-browser.sh "${ROOT_CA_PEM}" "${ROOT_CA_NAME}" && \
     ./add-certificate-to-browser.sh "${PROXY_CA_PEM}" "${PROXY_CA_NAME}" && \
     mkdir /home/${CONTAINER_USER}/.ssl && \
-    # cp -v ${ROOT_CA_DIR}/${ROOT_CA_PEM} /var/www/html/root-ca.pem && \
-    # cp -v ${ROOT_CA_DIR}/localhost.crt /var/www/html/localhost.pem && \
-    # cp -v ${ROOT_CA_DIR}/${PROXY_CA_PEM} /var/www/html/proxy.crt && \
     cp -v localhost.crt /home/${CONTAINER_USER}/.ssl/localhost.pem && \
     cp -v localhost.key /home/${CONTAINER_USER}/.ssl/localhost.key && \
-    chmod 644 /home/${CONTAINER_USER}/.ssl/localhost.key
-    #./add-certificate-to-node-server.sh "/etc/ssl/certs/ProxyCA.pem" && \
+    chmod 644 /home/${CONTAINER_USER}/.ssl/localhost.key && \
+    ./add-certificate-to-node-server.sh "/etc/ssl/certs/ProxyCA.pem" && \
 
     # Install Oh My Zsh for Root and Node user
-RUN bash -c "$(curl -fsSL https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh)" && \
+    bash -c "$(curl -fsSL https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh)" && \
     chsh -s /usr/bin/zsh && \
     cp -R /root/.oh-my-zsh /home/"${CONTAINER_USER}" && \
     cp /root/.zsh* /home/"${CONTAINER_USER}" && \
@@ -91,26 +88,23 @@ RUN bash -c "$(curl -fsSL https://raw.githubusercontent.com/robbyrussell/oh-my-z
     chown -R "${CONTAINER_USER}":"${CONTAINER_USER}" /home/"${CONTAINER_USER}" && \
     echo PATH=/opt/android-studio/bin:$PATH >> /home/${CONTAINER_USER}/.bashrc && \
     echo PATH=/opt/android-studio/bin:$PATH >> /home/${CONTAINER_USER}/.zshrc && \
-    sed -i s/ZSH_THEME=\"robbyrussell\"/ZSH_THEME=\"bira\"/g /home/${CONTAINER_USER}/.zshrc
+    sed -i s/ZSH_THEME=\"robbyrussell\"/ZSH_THEME=\"${ZSH_THEME}\"/g /home/${CONTAINER_USER}/.zshrc && \
 
-RUN curl -sL https://deb.nodesource.com/setup_10.x | bash - && \
-    apt install -y nodejs
+    curl -sL https://deb.nodesource.com/setup_10.x | bash - && \
+    apt install -y nodejs && \
 
-# RUN curl https://snapshots.mitmproxy.org/4.0.4/mitmproxy-4.0.4-linux.tar.gz -o mitmproxy.tar.gz && \
-#     tar -zxvf mitmproxy.tar.gz -C /usr/local/bin && \
-#     rm -rfv mitmproxy.tar.gz
+    curl https://snapshots.mitmproxy.org/4.0.4/mitmproxy-4.0.4-linux.tar.gz -o mitmproxy.tar.gz && \
+    tar -zxvf mitmproxy.tar.gz -C /usr/local/bin && \
+    rm -rfv mitmproxy.tar.gz && \
 
-RUN ./${ROOT_CA_DIR}/add-certificate-to-node-server.sh "/etc/ssl/certs/ProxyCA.pem"
+    curl https://dl.pstmn.io/download/latest/linux64 -o postman.tar.gz && \
+    tar -xzf postman.tar.gz -C /opt && \
+    rm -rfv postman.tar.gz && \
+    ln -s /opt/Postman/Postman /usr/bin/postman
 
-ARG DISPLAY=${DISPLAY:-":0.0"}
-ENV DISPLAY=${DISPLAY}
-
-ENV LANG en_GB.UTF-8
-ENV LANGUAGE en_GB:en
-ENV LC_ALL en_GB.UTF-8
-
-EXPOSE 80
-EXPOSE 443
+ENV LANG=en_GB.UTF-8 \
+    LANGUAGE=en_GB:en \
+    LC_ALL=en_GB.UTF-8
 
 USER ${CONTAINER_USER}
 

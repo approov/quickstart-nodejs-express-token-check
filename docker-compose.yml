@@ -13,13 +13,11 @@ services:
     volumes:
       - /dev/shm:/dev/shm
       - /tmp/.X11-unix:/tmp/.X11-unix
-      - ${ROOT_CA_SETUP_DIR:-./docker/build/setup}:/root-ca
       - ${NODE_DIR:-./}:/home/node/workspace
-      - ~/.ssh:/home/node/.ssh
-      #- ~/.docker-node-demo/${PROJECT_HOST_DIR}/mitmproxy:/home/mitmproxy/.mitmproxy
-      #- ./docker/build/.mozilla:/home/node/.mozilla
-    ports:
-      - 127.0.0.1:4000:4000
+      - ./postman/collections:/home/node/postman/collections
+    working_dir: /home/node/workspace/server
+    command:
+      - postman
     networks:
       - node_demo_network
 
