@@ -2,7 +2,7 @@
 
 set -eu
 
-_USER="$(id -un)"
+_USER="$(id -u)"
 
 ARG1=${1:---help}
 
@@ -12,98 +12,63 @@ ARG3=${3:-""}
 
 ARG4=${4:-""}
 
-mkdir -p ~/.docker-postman/collections && mkdir -p ~/.docker-postman/.config/Postman
-
-function Start_New_Browser
+function Show_Help
 {
-    printf "\n>>> STARTING NEW BROWSER INSTANCE FOR: ${@} <<<\n"
-    sudo docker-compose exec -d server firefox --new-instance "${@}"
+    echo && cat ./docker/usage-help.txt && echo
 }
-
-function Open_Browser_Tab
-{
-    local _url="${url:?Missing url to open in the browser!}"
-
-    printf "\n>>> OPEN TAB IN BROWSER FOR: ${_url} <<<\n"
-    sudo docker-compose exec -d server firefox "${_url}"
-}
-
-function Run_User_Shell
-{
-    local _user="${1:-1000}"
-    local _shell="${2:-zsh}"
-
-    sudo docker-compose run --rm --service-ports -u "${_user}" server "${_shell}"
-}
-
 
 function Start_User_Shell
 {
     local _user="${1:-1000}"
     local _shell="${2:-zsh}"
 
-    sudo docker-compose run --rm --service-ports -u "${_user}" server "${_shell}"
+    Create_Docker_Container ${_shell} ${_user}
 }
 
-function Execute_User_Shell
+function Create_Docker_Container
 {
-    local _user="${1:-1000}"
-    local _shell="${2:-zsh}"
+    local _command="${1:-zsh}"
+    local _user="${2:-1000}"
+    local _server_name="${3:-approov-protected-server}"
+    local _port="${4:-5000}"
 
-    sudo docker-compose exec -u "${_user}" server "${_shell}"
+    sudo docker run \
+        -it \
+        --rm \
+        --user "${_user}" \
+        --env-file .env \
+        --env "SERVER_NAME=server/${_server_name}.js" \
+        --env "HTTP_PORT=${_port}" \
+        --name "nodejs-express-${_server_name}-port-${_port}" \
+        --publish "127.0.0.1:${_port}:5000" \
+        --workdir "/home/node/workspace" \
+        --volume "$PWD:/home/node/workspace" \
+        approov/nodejs-express ${_command}
 }
 
-function Start_Proxy_Server
-{
-    printf "\n>>> STARTING PROXY SERVER <<<\n"
-    sudo docker-compose exec -d server mitmweb --ignore-hosts ".*auth0.*" --ignore-hosts ".*google.*" --web-iface 0.0.0.0
-    sleep 8
-    Open_Browser_Tab "http://localhost:8081"
-}
-
-function Start_Node_Server {
-    sudo docker-compose up -d --entrypoint 'bash -c "cd server && DEBUG=* npm start"' server
-}
-
-function Start_Demo {
-
-    printf "\n---> Starting Postman \n"
-    sudo docker-compose up -d server
-
-    printf "\n---> Starting Node Server \n"
-    sudo docker-compose exec server bash -c "cd /home/node/workspace/server && npm start"
-}
-
-if [ "${ARG1}" == "up" ] && [ "${ARG2}" == "demo" ]
+if [ "${ARG1}" == "build" ]
     then
-        Start_Demo
+        sudo docker build -t approov/nodejs-express ./docker
         exit 0
 fi
 
-if [ "${ARG1}" == "up" ] && [ "${ARG2}" == "proxy" ]
+if [ "${ARG1}" == "up" ] && [ "${ARG2}" == "approov-protected-server" ]
     then
-        Start_Proxy_Server
+        Create_Docker_Container "npm start" "${_USER}" "approov-protected-server" "${ARG3:-5000}"
         exit 0
 fi
 
-if [ "${ARG1}" == "shell" ]
+if [ "${ARG1}" == "up" ] && [ "${ARG2}" == "original-server" ]
     then
-        Run_User_Shell "${ARG2}" "${ARG3}"
+        Create_Docker_Container "node server/original-server.js" "${_USER}" "original-server" "${ARG3:-5001}"
         exit 0
 fi
 
-if [ "${ARG1}" == "exec" ] && [ "${ARG2}" == "shell" ]
+if [ "${ARG1}" == "start" ] && [ "${ARG2}" == "shell" ]
     then
-        Execute_User_Shell "${ARG3}" "${ARG4}"
+        Start_User_Shell "${ARG3}" "${ARG4}"
         exit 0
 fi
 
 
-
-if [ "${ARG1}" == "proxy" ]
-    then
-        Start_Proxy_Server
-        exit 0
-fi
-
-sudo docker-compose "${@}"
+Show_Help

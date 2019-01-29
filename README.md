@@ -1,23 +1,676 @@
-# NODE EXPRESS - APPROOV INTEGRATION
+# APPROOV INTEGRATION EXAMPLE
 
-This repository contains a Docker stack that aims to show how to integrate 
-Approov with a NodeJS Express server with the Approov Shapes Demo Server.
+To see how a server runs with an Approov integration please follow the
+[Approov Shapes Demo Server](./docs/approov-shapes-demo-server.md) walk-through.
+
+The concrete implementation of the Approov Shapes Demo Server is in the
+[approov-protected-server.js](./server/approov-protected-server.js) file, that
+is a simple NodeJS Express server with some endpoints protected by Approov and
+other endpoints without any Approov protection.
+
+Now let's continue reading this README for a **quick start** introduction in how
+to integrate Approov on a current project by using as an example the code for
+the Approov Shapes Demo Server.
 
 
-## INSTALL
+## APPROOV VALIDATION PROCESS
 
-```bash
-git clone git@gitlab.com:prgs/nodejs-on-docker.git shapes-demo && \
-cd shapes-demo && \
-git checkout docs && \
-git clone git@gitlab.com:prgs/nodejs-approov-token-check.git packages/approov-token-check && \
-cd packages/approov-token-check && \
-git checkout dev-midlleware && \
-cd ../../
+Before we dive into the code we need to understand the Approov validation
+process on the back-end side.
+
+### The Approov Token
+
+API calls protected by Approov will typically include a header holding an Approov
+JWT token. This token must be checked to ensure it has not expired and that it is
+properly signed with the secret shared between the back-end and the Approov cloud
+service.
+
+We will use a NodeJS package to help us in the validation of the Approov JWT
+token.
+
+> **NOTE**
+>
+> Just to be sure that we are on the same page, a JWT token have 3 parts, that
+> are separated by dots and represented as a string in the format of
+> `header.payload.signature`. Read more about JWT tokens [here](https://jwt.io/introduction/).
+
+### The Custom Payload Claim
+
+A custom payload claim in an Approov token is a base64 encoded sha256 hash of
+some unique identifier we may want to tie with the Approov token to enhance
+the security on that request, like an OAUTH2 token, but you are free to use what
+so ever you may want.
+
+Dummy example for the JWT token middle part, the payload:
+
+```
+{
+    "exp": 123456789, # required - the timestamp for when the token expires.
+    "iss":"failover", # optional - only included in tokens from the failover; the value is always “failover”.
+    "pay":"f3U2fniBJVE04Tdecj0d6orV9qT9t52TjfHxdUqDBgY=" # optional - a sha256 hash of the claim, encoded with base64.
+}
 ```
 
-## HOW TO INTEGRATE APPROOV
+The custom payload claim in an Approov token is the one in the `pay` key:
 
-* **[HOME](./docs/approov-integration-with-nodejs-express-server.md)**
-  + [Quick Start Guide](./docs/quick-start-guide.md)
-  + [Approov Shapes Demo Server](./docs/approov-shapes-demo-server.md)
+```
+"pay":"f3U2fniBJVE04Tdecj0d6orV9qT9t52TjfHxdUqDBgY="
+```
+
+**ALERT**:
+
+Please bear in mind that the custom payload claim is not meant to pass
+application data to the API server, but you can pass a base64 encoded sha256 hash
+of the data you want to send from the mobile app into the API server and have it
+hashing the data that was sent as usual on the request and compare it with the
+custom payload claim base64 sha256 hash to confirm that the integrity of the
+data was not compromised.
+
+
+## SYSTEM CLOCK
+
+In order to correctly check for the expiration times of the Approov tokens is
+very important that the Python Flask server is synchronizing automatically the
+system clock over the network with an authoritative time source. In Linux this
+is usual done with a NTP server.
+
+
+## REQUIREMENTS
+
+We will use NodeJS 10 with an Express API server to run our code.
+
+Docker is required for the ones wanting to use the docker environment provided
+by the [stack](./stack) bash script, that is a wrapper around docker commands.
+
+Postman is the tool we recommend to be used when simulating the queries against
+the API, but feel free to use any other tool of your preference.
+
+
+## THE DOCKER STACK
+
+We recommend the use of the included Docker stack to play with this Approov
+integration.
+
+For details in how to use it you need to follow the setup instructions in the
+[Approov Shapes Demo Server](./docs/approov-shapes-demo-server.md#development-environment)
+walk-through, but feel free to use your local environment to play with this
+Approov integration.
+
+
+## HOW TO USE THE POSTMAN COLLECTION
+
+This [Postman collection](./postman/shapes-demo-server.postman_collection.json)
+contains all the API endpoints and is useful to help us playing with the API and
+have a better understanding how the Approov integration works.
+
+The Approov tokens used in the headers where generated with
+[this helper script](./server/test/helpers/generate-token.py) and they cover all
+necessary scenarios, but feel free to use the script to generate valid and
+invalid tokens with different expire times and custom payload claims.
+
+We recommend you to go hover the [Approov Shapes Demo Server](./docs/approov-shapes-demo-server.md) walk-through to have a better understand how the Postman collection is used.
+
+
+## THE POSTMAN COLLECTION
+
+Import this [Postman collection](https://gitlab.com/snippets/1799104/raw) that
+contains all the API endpoints for the Approov Shapes Demo Server and we
+strongly recommend you to follow
+[this demo walk-through](./docs/approov-shapes-demo-server.md) after finishing
+the Approov integration that we are about to start.
+
+The Approov tokens used in the headers of this Postman collection where
+generated by [this helper script](./bin/generate-token.js) and
+they cover all necessary scenarios, but feel free to use the script to generate
+some more valid and invalid tokens, with different expire times and custom
+payload claims. Some examples of using it can be found [here](./docs/approov-shapes-demo-server.md#approov-tokens-generation).
+
+
+## INSTALL DEPENDENCIES
+
+If not already using the NPM packages `express-jwt` and `dotenv` in your
+project, please add them:
+
+```bash
+npm install --save express-jwt dotenv debug
+```
+
+## ORIGINAL SERVER
+
+Let's use the [original-server.js](./server/original-server.js) as an example
+for a current server where we want to add Approov to protect some or all the
+endpoints.
+
+After we add only the necessary code to integrate Approov, the end result
+will look like we have now in the [approov-protected-server.js](./server/approov-protected-server.js).
+
+
+## HOW TO INTEGRATE
+
+We will learn how to go from the [original-server.js](./server/original-server.js) to the
+[approov-protected-server.js](./server/approov-protected-server.js) and how to configure the server.
+
+In order to be able to check the Approov token the `express-jwt` library needs
+to know the secret used by the Approov cloud service to sign it. A secure way to
+do this is by passing it as an environment variable, as you can we have done [here](./server/configuration.js#L28`).
+
+Next we need to define two callbacks to be used during the Approov token check
+process. One callback is to perform the check itself with the library
+`express-jwt` and the other is to handle any errors occurred during that check.
+
+Let's breakdown the example implementation to make it easier to adapt to your
+current project.
+
+
+### Require Dependencies
+
+We need to require the dependencies we installed before.
+
+[Configuration file](./server/configuration.js#L1):
+
+```js
+// file: configuration.js
+
+// if not already in use add:
+require('dotenv').config()
+```
+
+[Approov Protected Server file](./server/configuration.js#L1):
+
+```js
+// file: approov-protected-server.js
+
+const jwt = require('express-jwt')
+const crypto = require('crypto')
+```
+
+### Setup Environment
+
+If you don't have already an `.env` file, then you need to create one in the
+root of your project by using this [.env.example](./.env.example) as your
+starting point.
+
+The `.env` file must contain this two variables:
+
+```env
+# the base64 encode is for value: approov-base64-encoded-secret
+APPROOV_BASE64_SECRET=YXBwcm9vdi1iYXNlNjQtZW5jb2RlZC1zZWNyZXQ=
+APPROOV_ABORT_REQUEST_ON_INVALID_TOKEN=true
+APPROOV_ABORT_REQUEST_ON_INVALID_CUSTOM_PAYLOAD_CLAIM=true
+APPROOV_LOGGING_ENABLED=true
+```
+
+
+Now we can read them from our code, like is done in the [configuration file](./server/configuration.js#L31-61):
+
+```js
+// file: configuration.js
+
+///////////////////////////
+/// APPROOV ENVIRONMENT
+//////////////////////////
+
+let isToAbortRequestOnInvalidToken = true
+let isToAbortOnInvalidClaim = true
+let isApproovLoggingEnabled = true
+const abortRequestOnInvalidToken = dotenv.parsed.APPROOV_ABORT_REQUEST_ON_INVALID_TOKEN || 'true'
+const abortOnInvalidClaim = dotenv.parsed.APPROOV_ABORT_REQUEST_ON_INVALID_CUSTOM_PAYLOAD_CLAIM || 'true'
+const approovLoggingEnabled = dotenv.parsed.APPROOV_LOGGING_ENABLED || 'true'
+
+if (abortRequestOnInvalidToken.toLowerCase() === 'false') {
+  isToAbortRequestOnInvalidToken = false
+}
+
+if (abortOnInvalidClaim.toLowerCase() === 'false') {
+  isToAbortOnInvalidClaim = false
+}
+
+if (approovLoggingEnabled.toLowerCase() === 'false') {
+  isApproovLoggingEnabled = false
+}
+
+const approov = {
+  abortRequestOnInvalidToken: isToAbortRequestOnInvalidToken,
+  abortRequestOnInvalidCustomPayloadClaim: isToAbortOnInvalidClaim,
+  approovLoggingEnabled: isApproovLoggingEnabled,
+
+  // The Approov base64 secret must be retrieved from the Approov admin portal
+  base64Secret: dotenv.parsed.APPROOV_BASE64_SECRET,
+}
+
+
+////////////////////////////
+/// EXPORT CONFIGURATION
+///////////////////////////
+
+module.exports = {
+  server,
+  approov,
+}
+```
+
+### Helper Functions
+
+We will need some very basic helper functions, like we have done [here](./server/approov-protected-server.js#L51-65):
+
+```js
+// file: approov-protected-server.js
+
+const isEmpty = function(value) {
+  return  (value === undefined) || (value === null) || (value === '')
+}
+
+const isString = function(value) {
+  return (typeof(value) === 'string')
+}
+
+const isEmptyString = function(value) {
+  return (isEmpty(value) === true) || (isString(value) === false) ||  (value.trim() === '')
+}
+
+const logApproov = function(req, res, message) {
+    debug(buildLogMessagePrefix(req, res) + ' ' + message)
+}
+```
+
+
+### Callbacks
+
+#### Approov Token
+
+[This callback](./server/approov-protected-server.js#L69-77) will be used in the
+middleware to check the Approov token:
+
+```js
+// file: approov-protected-server.js
+
+// callback that performs the Approov token check using the express-jwt library
+const checkApproovToken = jwt({
+  secret: Buffer.from(config.approov.base64Secret, 'base64'), // decodes the Approov secret
+  requestProperty: 'approovTokenDecoded',
+  getToken: function fromApproovTokenHeader(req) {
+    return req.get('approov-token')
+  },
+  algorithms: ['HS256']
+})
+```
+
+Then we need [this callback](./server/approov-protected-server.js#L79-99) to
+handle any error that may occur during the Approov token check:
+
+```js
+// file: approov-protected-server.js
+
+// callback to handle the errors occurred while checking the Approov token.
+const handlesApproovTokenError = function(err, req, res, next) {
+
+  message = 'REQUEST WITH INVALID APPROOV TOKEN'
+
+  if (err.name === 'UnauthorizedError') {
+    message = message + ' | ' + err
+  }
+
+  // rejects the request with 400 response when approov is enabled, otherwise
+  // will let the request to continue as usual.
+  if (err.name === 'UnauthorizedError' && config.approov.abortRequestOnInvalidToken === true) {
+    logApproov(req, res, 'REJECTED ' + message)
+    res.status(400).json({})
+    return
+  }
+
+  logApproov(req, res, 'ACCEPTED ' + message)
+
+  next()
+}
+```
+
+Finally we want to handle when the Approov token succeeds the validation process,
+as we have done [approov-protected-server.js](./server/approov-protected-server.js#L101-105)
+
+```js
+// file: approov-protected-server.js
+
+// When the Approov token validates successfully we may want to log, at least
+// in the demo. In production you may or not want to skip this.
+const handlesApproovTokenSuccess = function(req, res, next) {
+  logApproov(req, res, 'ACCEPTED REQUEST WITH VALID APPROOV TOKEN')
+  next()
+}
+```
+
+#### Custom Payload Claim
+
+We will use this two functions to validate if the custom payload claim in the
+Approov token matches the claim in the request, as we can see [here](./server/approov-protected-server.js#L110-161):
+
+```js
+// file: approov-protected-server.js
+
+// validates if the Approov contains the same claim has in the request
+const isValidCustomPayloadClaim = function(approovTokenDecoded, claimValue) {
+
+  if (isString(approovTokenDecoded)) {
+    return false
+  }
+
+  // checking if the approov token contains a custom payload claim and verify it.
+  if (! isEmptyString(approovTokenDecoded.pay)) {
+
+    // decodes the base64 custom payload claim hash into an hexadecimal string
+    const payloadClaimBase64Hash = approovTokenDecoded.pay
+    const payloadClaimHash = Buffer.from(payloadClaimBase64Hash, 'base64').toString('hex')
+
+    const claimValueHash = crypto.createHash('sha256').update(claimValue, 'utf-8').digest('hex')
+
+    return payloadClaimHash === claimValueHash
+  }
+
+  // The Approov failover running in the Google cloud doesn't return the custom
+  // payload claim, thus we always need to have a pass when is not present.
+  return true
+}
+
+// callback to check if the custom payload claim in an Approov token matches the
+// claim in the request
+const checkApproovTokenCustomPayloadClaim = function(req, res, next){
+
+  let message = 'REQUEST WITH VALID CUSTOM PAYLOAD CLAIM IN THE APPROOV TOKEN'
+
+  const claimValue = req.get('oauth2-token')
+
+  if (isEmptyString(claimValue)) {
+    return logApproov(req, res, 'REJECTED REQUEST WITHOUT PAYLOAD CLAIM VALUE')
+  }
+
+  const isValidClaim = isValidCustomPayloadClaim(req.approovTokenDecoded, claimValue)
+
+  if (isValidClaim === false) {
+    message = 'REQUEST WITH INVALID CUSTOM PAYLOAD CLAIM IN THE APPROOV TOKEN'
+  }
+
+  if (isValidClaim === false && config.approov.abortRequestOnInvalidCustomPayloadClaim === true) {
+    message = 'REJECTED ' + message
+    res.status(400).json({})
+  } else {
+    message = 'ACCEPTED ' + message
+    next()
+  }
+
+  logApproov(req, res, message)
+}
+```
+
+
+### Middleware
+
+We will use the middleware approach to intercept all endpoints we want to protect
+with an Approov Token. So any interceptor must be placed before we declare the
+endpoints  we want to protect, like is done in the
+[approov-protected-server.js](./server/approov-protected-server.js#L165-186).
+
+The following examples will use the callbacks we already have defined
+[here](#callbacks) to pass as the second parameter to the middleware interceptors.
+
+#### For specific endpoints
+
+To protect specific endpoints in a current server we only need to add the Approov
+interceptors for each endpoint we want to protect, as we have done [here](./server/approov-protected-server.js#L165-186):
+
+```js
+// file: approov-protected-server.js
+
+// Intercepts all calls to the shapes endpoint to validate the Approov token.
+app.use('/shapes', checkApproovToken)
+
+// Handles failure in validating the Approov token
+app.use('/shapes', handlesApproovTokenError)
+
+// Handles requests where the Approov token is a valid one.
+app.use('/shapes', handlesApproovTokenSuccess)
+
+// Intercepts all calls to the forms endpoint to validate the Approov token.
+app.use('/forms', checkApproovToken)
+
+// Handles failure in validating the Approov token
+app.use('/forms', handlesApproovTokenError)
+
+// Handles requests where the Approov token is a valid one.
+app.use('/forms', handlesApproovTokenSuccess)
+
+// checks if the custom payload claim is present in the Approov token and
+// matches the claim used by the mobile app, that in this case we decided to be
+// the ouath2 token, but you may want to use another type of claim.
+app.use('/forms', checkApproovTokenCustomPayloadClaim)
+```
+
+#### For all endpoints
+
+To protect all endpoints we only need to declare the Approov interceptor for the
+API root endpoint `/`, thus we need to modify the above code to look like this:
+
+```js
+// file: approov-protected-server.js
+
+// Intercepts all calls to the shapes endpoint to validate the Approov token.
+app.use('/', checkApproovToken)
+
+// Handles failure in validating the Approov token
+app.use('/', handlesApproovTokenError)
+
+// Handles requests where the Approov token is a valid one.
+app.use('/', handlesApproovTokenSuccess)
+
+// only use in the root endpoint `/` if you want to validate the custom payload
+// claim in all endpoints, otherwise declare it per endpoint you want to protect.
+app.use('/', checkApproovTokenCustomPayloadClaim)
+```
+
+### The Code Difference
+
+If we compare the [original-server.js](./server/original-server.js) with the
+[approov-protected-server.js](./server/approov-protected-server.js) we will see
+this file difference:
+
+```js
+--- /home/sublime/workspace/node/express/server/original-server.js
++++ /home/sublime/workspace/node/express/server/approov-protected-server.js
+@@ -1,4 +1,6 @@
+-const debug = require('debug')('original-server')
++const debug = require('debug')('approov-protected-server')
++const jwt = require('express-jwt')
++const crypto = require('crypto')
+ const config = require('./configuration')
+ const https = require('https')
+ const fs = require('fs')
+@@ -40,6 +42,152 @@
+   return {"form": forms[Math.floor((Math.random() * forms.length))]}
+ }
+
++/////////////////////////////////
++/// STARTS APPROOV INTEGRATION
++////////////////////////////////
++
++////// APPROOV HELPER FUNCTIONS //////
++
++const isEmpty = function(value) {
++  return  (value === undefined) || (value === null) || (value === '')
++}
++
++const isString = function(value) {
++  return (typeof(value) === 'string')
++}
++
++const isEmptyString = function(value) {
++  return (isEmpty(value) === true) || (isString(value) === false) ||  (value.trim() === '')
++}
++
++const logApproov = function(req, res, message) {
++    debug(buildLogMessagePrefix(req, res) + ' ' + message)
++}
++
++////// APPROOV TOKEN //////
++
++// callback that performs the Approov token check using the express-jwt library
++const checkApproovToken = jwt({
++  secret: Buffer.from(config.approov.base64Secret, 'base64'), // decodes the Approov secret
++  requestProperty: 'approovTokenDecoded',
++  getToken: function fromApproovTokenHeader(req) {
++    return req.get('approov-token')
++  },
++  algorithms: ['HS256']
++})
++
++// callback to handle the errors occurred while checking the Approov token.
++const handlesApproovTokenError = function(err, req, res, next) {
++
++  message = 'REQUEST WITH INVALID APPROOV TOKEN'
++
++  if (err.name === 'UnauthorizedError') {
++    message = message + ' | ' + err
++  }
++
++  // rejects the request with 400 response when approov is enabled, otherwise
++  // will let the request to continue as usual.
++  if (err.name === 'UnauthorizedError' && config.approov.abortRequestOnInvalidToken === true) {
++    logApproov(req, res, 'REJECTED ' + message)
++    res.status(400).json({})
++    return
++  }
++
++  logApproov(req, res, 'ACCEPTED ' + message)
++
++  next()
++}
++
++// handles when an Approov token is successfully validated.
++const handlesApproovTokenSuccess = function(req, res, next) {
++  logApproov(req, res, 'ACCEPTED REQUEST WITH VALID APPROOV TOKEN')
++  next()
++}
++
++
++////// CUSTOM PAYLOAD CLAIN IN THE APPROOV TOKEN //////
++
++// validates if the Approov contains the same claim has in the request
++const isValidCustomPayloadClaim = function(approovTokenDecoded, claimValue) {
++
++  if (isString(approovTokenDecoded)) {
++    return false
++  }
++
++  // checking if the approov token contains a custom payload claim and verify it.
++  if (! isEmptyString(approovTokenDecoded.pay)) {
++
++    // decodes the base64 custom payload claim hash into an hexadecimal string
++    const payloadClaimBase64Hash = approovTokenDecoded.pay
++    const payloadClaimHash = Buffer.from(payloadClaimBase64Hash, 'base64').toString('hex')
++
++    const claimValueHash = crypto.createHash('sha256').update(claimValue, 'utf-8').digest('hex')
++
++    return payloadClaimHash === claimValueHash
++  }
++
++  // The Approov failover running in the Google cloud doesn't return the custom
++  // payload claim, thus we always need to have a pass when is not present.
++  return true
++}
++
++// callback to check if the custom payload claim in an Approov token matches the
++// claim in the request
++const checkApproovTokenCustomPayloadClaim = function(req, res, next){
++
++  let message = 'REQUEST WITH VALID CUSTOM PAYLOAD CLAIM IN THE APPROOV TOKEN'
++
++  const claimValue = req.get('oauth2-token')
++
++  if (isEmptyString(claimValue)) {
++    return logApproov(req, res, 'REJECTED REQUEST WITHOUT PAYLOAD CLAIM VALUE')
++  }
++
++  const isValidClaim = isValidCustomPayloadClaim(req.approovTokenDecoded, claimValue)
++
++  if (isValidClaim === false) {
++    message = 'REQUEST WITH INVALID CUSTOM PAYLOAD CLAIM IN THE APPROOV TOKEN'
++  }
++
++  if (isValidClaim === false && config.approov.abortRequestOnInvalidCustomPayloadClaim === true) {
++    message = 'REJECTED ' + message
++    res.status(400).json({})
++  } else {
++    message = 'ACCEPTED ' + message
++    next()
++  }
++
++  logApproov(req, res, message)
++}
++
++/////// THE APPROOV INTERCEPTORS ///////
++
++// Intercepts all calls to the shapes endpoint to validate the Approov token.
++app.use('/shapes', checkApproovToken)
++
++// Handles failure in validating the Approov token
++app.use('/shapes', handlesApproovTokenError)
++
++// Handles requests where the Approov token is a valid one.
++app.use('/shapes', handlesApproovTokenSuccess)
++
++// Intercepts all calls to the forms endpoint to validate the Approov token.
++app.use('/forms', checkApproovToken)
++
++// Handles failure in validating the Approov token
++app.use('/forms', handlesApproovTokenError)
++
++// Handles requests where the Approov token is a valid one.
++app.use('/forms', handlesApproovTokenSuccess)
++
++// checks if the custom payload claim is present in the Approov token and
++// matches the claim used by the mobile app, that in this case we decided to be
++// the ouath2 token, but you may want to use another type of claim.
++app.use('/forms', checkApproovTokenCustomPayloadClaim)
++
++///////////////////////////////
++/// ENDS APPOOV INTEGRATION
++//////////////////////////////
+
+ ////////////////
+ // ENDPOINTS
+@@ -64,13 +212,11 @@
+
+ // shapes endpoint returns a random shape.
+ app.get('/shapes', function(req, res, next) {
+-  logResponseToRequest(req, res)
+   res.json(getRandomShapeResponse())
+ })
+
+ // shapes endpoint returns a random form.
+ app.get('/forms', function(req, res, next) {
+-  logResponseToRequest(req, res)
+   res.json(getRandomFormResponse())
+ })
+```
+
+As we can see the Approov integration in a current server is simple, easy and is
+done with just a few lines of code.
+
+If you have not done it already, now is time to follow the
+[Approov Shapes Demo Server](./docs/approov-shapes-demo-server.md) walk-through
+to see and have a feel for how all this works.
+
+
+## PRODUCTION
+
+In order to protect the communication between your mobile app and the API server
+is important to only communicate hover a secure communication channel, aka https.
+
+Please bear in mind that https on its own is not enough, certificate pinning
+must be also used to pin the connection between the mobile app and the API
+server in order to prevent [Man in the Middle Attacks](https://approov.io/docs/mitm-detection.html).
+
+We do not use https and certificate pinning in this Approov integration example
+because we want to be able to run the
+[Approov Shapes Demo Server](./docs/approov-shapes-demo-server.md) in localhost.
+
+However in production will be mandatory to implement at least
+[static pinning](https://approov.io/docs/mitm-detection.html#id1)
+or [dynamic pinning](https://approov.io/docs/mitm-detection.html#dynamic-pinning).
