@@ -108,7 +108,9 @@ The Approov tokens used in the headers where generated with
 necessary scenarios, but feel free to use the script to generate valid and
 invalid tokens with different expire times and custom payload claims.
 
-We recommend you to go hover the [Approov Shapes Demo Server](./docs/approov-shapes-demo-server.md) walk-through to have a better understand how the Postman collection is used.
+We recommend you to go over the
+[Approov Shapes Demo Server](./docs/approov-shapes-demo-server.md) walk-through
+to have a better understanding how the Postman collection is used.
 
 
 ## THE POSTMAN COLLECTION
@@ -152,7 +154,8 @@ We will learn how to go from the [original-server.js](./server/original-server.j
 
 In order to be able to check the Approov token the `express-jwt` library needs
 to know the secret used by the Approov cloud service to sign it. A secure way to
-do this is by passing it as an environment variable, as you can we have done [here](./server/configuration.js#L28`).
+do this is by passing it as an environment variable, as you can see we have done
+[here](./server/configuration.js#L28).
 
 Next we need to define two callbacks to be used during the Approov token check
 process. One callback is to perform the check itself with the library
@@ -671,6 +674,6 @@ We do not use https and certificate pinning in this Approov integration example
 because we want to be able to run the
 [Approov Shapes Demo Server](./docs/approov-shapes-demo-server.md) in localhost.
 
-However in production will be mandatory to implement at least
+However in production it will be mandatory to implement at least
 [static pinning](https://approov.io/docs/mitm-detection.html#id1)
 or [dynamic pinning](https://approov.io/docs/mitm-detection.html#dynamic-pinning).
