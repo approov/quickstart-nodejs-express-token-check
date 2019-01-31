@@ -171,6 +171,7 @@ Usage:
 Options:
     --expire   EXPIRE  The Approov token expire time in minutes [default: 5].
     --claim    CLAIM   The base64 encode sha256 hash of the custom payload claim for the Approov token.
+    --claim-example    Same as --claim but using an hard-coded claim example.
     --secret   SECRET  The base64 encoded secret to sign the Approov token for test purposes.
     -h --help          Show this screen.
 ```

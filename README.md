@@ -252,9 +252,110 @@ module.exports = {
 }
 ```
 
-### Helper Functions
+### Customizable Approov Callbacks
 
-We will need some very basic helper functions, like we have done [here](./server/approov-protected-server.js#L51-65):
+This are callbacks used in the Approov Integration that you may want to
+customize to the needs of your application.
+
+Lets's start with the logging callback that we can see in [approov-protected-server.js](./server/approov-protected-server.js#L53-56):
+
+```js
+// file: approov-protected-server.js
+
+// Callback to be customized with your preferred way of logging.
+const logApproov = function(req, res, message) {
+    debug(buildLogMessagePrefix(req, res) + ' ' + message)
+}
+```
+
+Next we have the callback to get the claim value that we want to compare against
+the custom payload claim in the Approov token, as see in [approov-protected-server.js](./server/approov-protected-server.js#L58-64):
+
+```js
+// file: approov-protected-server.js
+
+// Callback to be personalized in order to get the claim value being used by
+// your application.
+// In the current scenario we use an Oauth2 token, but feel free to use what
+// suits best your needs.
+const getClaimValueFromRequest = function(req) {
+  return req.get('oauth2-token')
+}
+```
+
+Each time an Approov token doesn't validate for any reason the Approov
+integration will pass the control to the application logic by invoking a callback as the one defined in [approov-protected-server.js](./server/approov-protected-server.js#L66-87):
+
+```js
+// file: approov-protected-server.js
+
+// Callback to be customized with how you want to handle a request with an
+// invalid Approov token.
+// The code included in this callback is provided as an example, that you can
+// keep or totally change it in a way that best suits your needs.
+const handlesRequestWithInvalidApproovToken = function(err, req, res, next) {
+
+  // Logging a message to make clear in the logs what was the action we took.
+  // Feel free to skip it if you think is not necessary to your use case.
+  let message = 'REQUEST WITH INVALID APPROOV TOKEN'
+
+  if (config.approov.abortRequestOnInvalidToken === true) {
+    message = 'REJECTED ' + message
+    logApproov(req, res, message)
+    res.status(400).json({})
+    return
+  }
+
+  message = 'ACCEPTED ' + message
+  logApproov(req, res, message)
+  next()
+  return
+}
+```
+
+The last customizable callback will be invoked by the Approov integration to
+allow the application to decide what action to take when the request claim value
+doesn't match the custom payload claim value in the Approov token, as defined in
+[approov-protected-server.js](./server/approov-protected-server.js#L89-111):
+
+```js
+// file: approov-protected-server.js
+
+// Callback to be customized with how you want to handle a request where the
+// claim in the request doesn't match the custom payload claim in the Approov
+// token.
+// The code included in this callback is provided as an example, that you can
+// keep or totally change it in a way that best suits your needs.
+const handlesRequestWithInvalidClaimValue = function(req, res, next) {
+
+  // Logging here to make clear in the logs what was the action we took.
+  // Feel free to skip it if you think is not necessary to your use case.
+  let message = 'REQUEST WITH INVALID CLAIM VALUE'
+
+  if (config.approov.abortRequestOnInvalidCustomPayloadClaim === true) {
+    message = 'REJECTED ' + message
+    logApproov(req, res, message)
+    res.status(400).json({})
+    return
+  }
+
+  message = 'ACCEPTED ' + message
+  logApproov(req, res, message)
+  next()
+  return
+}
+```
+
+### Approov Integration Core Callbacks
+
+This core callbacks are specific to the Approov integration and once they don't
+interfere with the flow or behavior of your application we think they are not in
+need of being customized.
+
+#### Helper Functions
+
+The core callbacks will need some very basic helper functions, like the ones
+defined in the [approov-protected-server](./server/approov-protected-server.js#L125-135):
 
 ```js
 // file: approov-protected-server.js
@@ -270,102 +371,94 @@ const isString = function(value) {
 const isEmptyString = function(value) {
   return (isEmpty(value) === true) || (isString(value) === false) ||  (value.trim() === '')
 }
-
-const logApproov = function(req, res, message) {
-    debug(buildLogMessagePrefix(req, res) + ' ' + message)
-}
 ```
-
-
-### Callbacks
 
 #### Approov Token
 
-[This callback](./server/approov-protected-server.js#L69-77) will be used in the
+[This callback](./server/approov-protected-server.js#L141-150) will be used in the
 middleware to check the Approov token:
 
 ```js
 // file: approov-protected-server.js
 
-// callback that performs the Approov token check using the express-jwt library
+// Callback that performs the Approov token check using the express-jwt library
 const checkApproovToken = jwt({
   secret: Buffer.from(config.approov.base64Secret, 'base64'), // decodes the Approov secret
   requestProperty: 'approovTokenDecoded',
   getToken: function fromApproovTokenHeader(req) {
+    req.approovTokenError = false
     return req.get('approov-token')
   },
   algorithms: ['HS256']
 })
 ```
 
-Then we need [this callback](./server/approov-protected-server.js#L79-99) to
+Then we need [this callback](./server/approov-protected-server.js#L152-166) to
 handle any error that may occur during the Approov token check:
 
 ```js
 // file: approov-protected-server.js
 
-// callback to handle the errors occurred while checking the Approov token.
+// Callback to handle the errors occurred while checking the Approov token.
 const handlesApproovTokenError = function(err, req, res, next) {
 
-  message = 'REQUEST WITH INVALID APPROOV TOKEN'
-
   if (err.name === 'UnauthorizedError') {
-    message = message + ' | ' + err
-  }
+    message = 'APPROOV TOKEN ERROR: ' + err
+    logApproov(req, res, message)
 
-  // rejects the request with 400 response when approov is enabled, otherwise
-  // will let the request to continue as usual.
-  if (err.name === 'UnauthorizedError' && config.approov.abortRequestOnInvalidToken === true) {
-    logApproov(req, res, 'REJECTED ' + message)
-    res.status(400).json({})
+    req.approovTokenError = true
+    handlesRequestWithInvalidApproovToken(err, req, res, next)
     return
   }
 
-  logApproov(req, res, 'ACCEPTED ' + message)
-
   next()
+  return
 }
 ```
 
 Finally we want to handle when the Approov token succeeds the validation process,
-as we have done [approov-protected-server.js](./server/approov-protected-server.js#L101-105)
+as we have done [approov-protected-server.js](./server/approov-protected-server.js#L168-176)
 
 ```js
 // file: approov-protected-server.js
 
-// When the Approov token validates successfully we may want to log, at least
-// in the demo. In production you may or not want to skip this.
+// Callback to handles when an Approov token is successfully validated.
 const handlesApproovTokenSuccess = function(req, res, next) {
-  logApproov(req, res, 'ACCEPTED REQUEST WITH VALID APPROOV TOKEN')
-  next()
+    if (req.approovTokenError === false) {
+      logApproov(req, res, 'ACCEPTED REQUEST WITH VALID APPROOV TOKEN')
+    }
+
+    next()
+    return
 }
 ```
 
 #### Custom Payload Claim
 
-We will use this two functions to validate if the custom payload claim in the
-Approov token matches the claim in the request, as we can see [here](./server/approov-protected-server.js#L110-161):
+We will use this two functions to validate if the claim value in the request
+matches the custom payload claim in the Approov token, as we can see in the
+[approov-protected-server.js](./server/approov-protected-server.js#L182-241):
 
 ```js
 // file: approov-protected-server.js
 
-// validates if the Approov contains the same claim has in the request
-const isValidCustomPayloadClaim = function(approovTokenDecoded, claimValue) {
+// Validates if the Approov contains the same claim has in the request
+const isClaimValueInRequestValid = function(requestClaimValue, approovTokenDecoded) {
 
-  if (isString(approovTokenDecoded)) {
+  if (isEmptyString(requestClaimValue)) {
+    return false
+  }
+
+  if (isEmpty(approovTokenDecoded)) {
     return false
   }
 
   // checking if the approov token contains a custom payload claim and verify it.
   if (! isEmptyString(approovTokenDecoded.pay)) {
 
-    // decodes the base64 custom payload claim hash into an hexadecimal string
-    const payloadClaimBase64Hash = approovTokenDecoded.pay
-    const payloadClaimHash = Buffer.from(payloadClaimBase64Hash, 'base64').toString('hex')
+    const requestBase64ClaimValueHash = crypto.createHash('sha256').update(requestClaimValue, 'utf-8').digest('base64')
 
-    const claimValueHash = crypto.createHash('sha256').update(claimValue, 'utf-8').digest('hex')
-
-    return payloadClaimHash === claimValueHash
+    return approovTokenDecoded.pay === requestBase64ClaimValueHash
   }
 
   // The Approov failover running in the Google cloud doesn't return the custom
@@ -373,33 +466,42 @@ const isValidCustomPayloadClaim = function(approovTokenDecoded, claimValue) {
   return true
 }
 
-// callback to check if the custom payload claim in an Approov token matches the
+
+// Callback to check if the custom payload claim in an Approov token matches the
 // claim in the request
 const checkApproovTokenCustomPayloadClaim = function(req, res, next){
 
-  let message = 'REQUEST WITH VALID CUSTOM PAYLOAD CLAIM IN THE APPROOV TOKEN'
-
-  const claimValue = req.get('oauth2-token')
-
-  if (isEmptyString(claimValue)) {
-    return logApproov(req, res, 'REJECTED REQUEST WITHOUT PAYLOAD CLAIM VALUE')
+  if (req.approovTokenError === true) {
+    next()
+    return
   }
 
-  const isValidClaim = isValidCustomPayloadClaim(req.approovTokenDecoded, claimValue)
+  let message = 'REQUEST WITH VALID CLAIM VALUE'
+
+  const requestClaimValue = getClaimValueFromRequest(req)
+
+  if (isEmptyString(requestClaimValue)) {
+    message = 'REQUEST WITHOUT A CLAIM VALUE'
+    handlesRequestWithInvalidClaimValue(req, res, next)
+    return
+  }
+
+  // checks if the claim from the request matches the custom payload claim in
+  // the Approov token.
+  const isValidClaim = isClaimValueInRequestValid(requestClaimValue, req.approovTokenDecoded)
 
   if (isValidClaim === false) {
-    message = 'REQUEST WITH INVALID CUSTOM PAYLOAD CLAIM IN THE APPROOV TOKEN'
+    message = 'REQUEST WITH CLAIM VALUE NOT MATCHING THE CUSTOM PAYLOAD CLAIM IN THE APPROOV TOKEN'
+    logApproov(req, res, message)
+    handlesRequestWithInvalidClaimValue(req, res, next)
+    return
   }
 
-  if (isValidClaim === false && config.approov.abortRequestOnInvalidCustomPayloadClaim === true) {
-    message = 'REJECTED ' + message
-    res.status(400).json({})
-  } else {
-    message = 'ACCEPTED ' + message
-    next()
-  }
 
+  message = 'ACCEPTED ' + message
   logApproov(req, res, message)
+  next()
+  return
 }
 ```
 
@@ -412,12 +514,13 @@ endpoints  we want to protect, like is done in the
 [approov-protected-server.js](./server/approov-protected-server.js#L165-186).
 
 The following examples will use the callbacks we already have defined
-[here](#callbacks) to pass as the second parameter to the middleware interceptors.
+[here](#approov-integration-core-callbacks) to pass as the second parameter to
+the middleware interceptors.
 
 #### For specific endpoints
 
 To protect specific endpoints in a current server we only need to add the Approov
-interceptors for each endpoint we want to protect, as we have done [here](./server/approov-protected-server.js#L165-186):
+interceptors for each endpoint we want to protect, as we have done [here](./server/approov-protected-server.js#L245-266):
 
 ```js
 // file: approov-protected-server.js
@@ -485,13 +588,86 @@ this file difference:
  const config = require('./configuration')
  const https = require('https')
  const fs = require('fs')
-@@ -40,6 +42,152 @@
-   return {"form": forms[Math.floor((Math.random() * forms.length))]}
+@@ -41,6 +43,237 @@
  }
 
-+/////////////////////////////////
-+/// STARTS APPROOV INTEGRATION
-+////////////////////////////////
+
++////////////////////////////////////////////////////////////////////////////////
++/// YOUR APPLICATION CUSTOMIZABLE CALLBACKS FOR THE APPROOV INTEGRATION
++////////////////////////////////////////////////////////////////////////////////
++///
++/// Feel free to customize this callbacks to best suite the needs your needs.
++///
++
++// Callback to be customized with your preferred way of logging.
++const logApproov = function(req, res, message) {
++    debug(buildLogMessagePrefix(req, res) + ' ' + message)
++}
++
++// Callback to be personalized in order to get the claim value being used by
++// your application.
++// In the current scenario we use an Oauth2 token, but feel free to use what
++// suits best your needs.
++const getClaimValueFromRequest = function(req) {
++  return req.get('oauth2-token')
++}
++
++// Callback to be customized with how you want to handle a request with an
++// invalid Approov token.
++// The code included in this callback is provided as an example, that you can
++// keep or totally change it in a way that best suits your needs.
++const handlesRequestWithInvalidApproovToken = function(err, req, res, next) {
++
++  // Logging a message to make clear in the logs what was the action we took.
++  // Feel free to skip it if you think is not necessary to your use case.
++  let message = 'REQUEST WITH INVALID APPROOV TOKEN'
++
++  if (config.approov.abortRequestOnInvalidToken === true) {
++    message = 'REJECTED ' + message
++    logApproov(req, res, message)
++    res.status(400).json({})
++    return
++  }
++
++  message = 'ACCEPTED ' + message
++  logApproov(req, res, message)
++  next()
++  return
++}
++
++// Callback to be customized with how you want to handle a request where the
++// claim in the request doesn't match the custom payload claim in the Approov
++// token.
++// The code included in this callback is provided as an example, that you can
++// keep or totally change it in a way that best suits your needs.
++const handlesRequestWithInvalidClaimValue = function(req, res, next) {
++
++  // Logging here to make clear in the logs what was the action we took.
++  // Fseel free to skip it if you think is not necessary to your use case.
++  let message = 'REQUEST WITH INVALID CLAIM VALUE'
++
++  if (config.approov.abortRequestOnInvalidCustomPayloadClaim === true) {
++    message = 'REJECTED ' + message
++    logApproov(req, res, message)
++    res.status(400).json({})
++    return
++  }
++
++  message = 'ACCEPTED ' + message
++  logApproov(req, res, message)
++  next()
++  return
++}
++
++
++////////////////////////////////////////////////////////////////////////////////
++/// STARTS NON CUSTOMIZABLE LOGIC FOR THE APPROOV INTEGRATION
++////////////////////////////////////////////////////////////////////////////////
++///
++/// This section contains code that is specific to the Approov integration,
++/// thus we think that is not necessary to customize it, once is not
++/// interfering with your application logic or behavior.
++///
 +
 +////// APPROOV HELPER FUNCTIONS //////
 +
@@ -507,70 +683,68 @@ this file difference:
 +  return (isEmpty(value) === true) || (isString(value) === false) ||  (value.trim() === '')
 +}
 +
-+const logApproov = function(req, res, message) {
-+    debug(buildLogMessagePrefix(req, res) + ' ' + message)
-+}
 +
 +////// APPROOV TOKEN //////
 +
-+// callback that performs the Approov token check using the express-jwt library
++
++// Callback that performs the Approov token check using the express-jwt library
 +const checkApproovToken = jwt({
 +  secret: Buffer.from(config.approov.base64Secret, 'base64'), // decodes the Approov secret
 +  requestProperty: 'approovTokenDecoded',
 +  getToken: function fromApproovTokenHeader(req) {
++    req.approovTokenError = false
 +    return req.get('approov-token')
 +  },
 +  algorithms: ['HS256']
 +})
 +
-+// callback to handle the errors occurred while checking the Approov token.
++// Callback to handle the errors occurred while checking the Approov token.
 +const handlesApproovTokenError = function(err, req, res, next) {
 +
-+  message = 'REQUEST WITH INVALID APPROOV TOKEN'
++  message = 'APPROOV TOKEN ERROR: ' + err
++  logApproov(req, res, message)
 +
 +  if (err.name === 'UnauthorizedError') {
-+    message = message + ' | ' + err
-+  }
-+
-+  // rejects the request with 400 response when approov is enabled, otherwise
-+  // will let the request to continue as usual.
-+  if (err.name === 'UnauthorizedError' && config.approov.abortRequestOnInvalidToken === true) {
-+    logApproov(req, res, 'REJECTED ' + message)
-+    res.status(400).json({})
++    req.approovTokenError = true
++    handlesRequestWithInvalidApproovToken(err, req, res, next)
 +    return
 +  }
 +
-+  logApproov(req, res, 'ACCEPTED ' + message)
-+
 +  next()
++  return
 +}
 +
-+// handles when an Approov token is successfully validated.
++// Callback to handles when an Approov token is successfully validated.
 +const handlesApproovTokenSuccess = function(req, res, next) {
-+  logApproov(req, res, 'ACCEPTED REQUEST WITH VALID APPROOV TOKEN')
-+  next()
++    if (req.approovTokenError === false) {
++      logApproov(req, res, 'ACCEPTED REQUEST WITH VALID APPROOV TOKEN')
++    }
++
++    next()
++    return
 +}
 +
 +
 +////// CUSTOM PAYLOAD CLAIN IN THE APPROOV TOKEN //////
 +
-+// validates if the Approov contains the same claim has in the request
-+const isValidCustomPayloadClaim = function(approovTokenDecoded, claimValue) {
 +
-+  if (isString(approovTokenDecoded)) {
++// Validates if the Approov contains the same claim has in the request
++const isClaimValueInRequestValid = function(requestClaimValue, approovTokenDecoded) {
++
++  if (isEmptyString(requestClaimValue)) {
++    return false
++  }
++
++  if (isEmpty(approovTokenDecoded)) {
 +    return false
 +  }
 +
 +  // checking if the approov token contains a custom payload claim and verify it.
 +  if (! isEmptyString(approovTokenDecoded.pay)) {
 +
-+    // decodes the base64 custom payload claim hash into an hexadecimal string
-+    const payloadClaimBase64Hash = approovTokenDecoded.pay
-+    const payloadClaimHash = Buffer.from(payloadClaimBase64Hash, 'base64').toString('hex')
++    const requestBase64ClaimValueHash = crypto.createHash('sha256').update(requestClaimValue, 'utf-8').digest('base64')
 +
-+    const claimValueHash = crypto.createHash('sha256').update(claimValue, 'utf-8').digest('hex')
-+
-+    return payloadClaimHash === claimValueHash
++    return approovTokenDecoded.pay === requestBase64ClaimValueHash
 +  }
 +
 +  // The Approov failover running in the Google cloud doesn't return the custom
@@ -578,33 +752,41 @@ this file difference:
 +  return true
 +}
 +
-+// callback to check if the custom payload claim in an Approov token matches the
++// Callback to check if the custom payload claim in an Approov token matches the
 +// claim in the request
 +const checkApproovTokenCustomPayloadClaim = function(req, res, next){
 +
-+  let message = 'REQUEST WITH VALID CUSTOM PAYLOAD CLAIM IN THE APPROOV TOKEN'
-+
-+  const claimValue = req.get('oauth2-token')
-+
-+  if (isEmptyString(claimValue)) {
-+    return logApproov(req, res, 'REJECTED REQUEST WITHOUT PAYLOAD CLAIM VALUE')
++  if (req.approovTokenError === true) {
++    next()
++    return
 +  }
 +
-+  const isValidClaim = isValidCustomPayloadClaim(req.approovTokenDecoded, claimValue)
++  let message = 'REQUEST WITH VALID CLAIM VALUE'
++
++  const requestClaimValue = getClaimValueFromRequest(req)
++
++  if (isEmptyString(requestClaimValue)) {
++    message = 'REQUEST WITHOUT A CLAIM VALUE'
++    handlesRequestWithInvalidClaimValue(req, res, next)
++    return
++  }
++
++  // checks if the claim from the request matches the custom payload claim in
++  // the Approov token.
++  const isValidClaim = isClaimValueInRequestValid(requestClaimValue, req.approovTokenDecoded)
 +
 +  if (isValidClaim === false) {
-+    message = 'REQUEST WITH INVALID CUSTOM PAYLOAD CLAIM IN THE APPROOV TOKEN'
++    message = 'REQUEST WITH CLAIM VALUE NOT MATCHING THE CUSTOM PAYLOAD CLAIM IN THE APPROOV TOKEN'
++    logApproov(req, res, message)
++    handlesRequestWithInvalidClaimValue(req, res, next)
++    return
 +  }
 +
-+  if (isValidClaim === false && config.approov.abortRequestOnInvalidCustomPayloadClaim === true) {
-+    message = 'REJECTED ' + message
-+    res.status(400).json({})
-+  } else {
-+    message = 'ACCEPTED ' + message
-+    next()
-+  }
 +
++  message = 'ACCEPTED ' + message
 +  logApproov(req, res, message)
++  next()
++  return
 +}
 +
 +/////// THE APPROOV INTERCEPTORS ///////
@@ -632,13 +814,19 @@ this file difference:
 +// the ouath2 token, but you may want to use another type of claim.
 +app.use('/forms', checkApproovTokenCustomPayloadClaim)
 +
-+///////////////////////////////
++/// NOTE:
++///   Is important to place all the Approov interceptors before we declare the
++///   endpoints of the API, otherwise they will not be able to intercept any
++///   request.
++
++////////////////////////////////////////////////////////////////////////////////
 +/// ENDS APPOOV INTEGRATION
-+//////////////////////////////
-
++////////////////////////////////////////////////////////////////////////////////
++
  ////////////////
  // ENDPOINTS
-@@ -64,13 +212,11 @@
+ ////////////////
+@@ -64,13 +297,11 @@
 
  // shapes endpoint returns a random shape.
  app.get('/shapes', function(req, res, next) {
