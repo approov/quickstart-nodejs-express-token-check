@@ -2,35 +2,27 @@
 
 set -eu
 
-_USER="$(id -u)"
+CONTAINER_USER="$(id -u)"
 
-ARG1=${1:---help}
-
-ARG2=${2:-""}
-
-ARG3=${3:-""}
-
-ARG4=${4:-""}
+HTTP_PORT=5000
 
 function Show_Help
 {
     echo && cat ./docker/usage-help.txt && echo
 }
 
-function Start_User_Shell
+function Build_Docker_Image()
 {
-    local _user="${1:-1000}"
-    local _shell="${2:-zsh}"
-
-    Create_Docker_Container ${_shell} ${_user}
+  sudo docker build -t approov/nodejs-express ./docker
 }
 
 function Create_Docker_Container
 {
     local _command="${1:-zsh}"
-    local _user="${2:-1000}"
-    local _server_name="${3:-approov-protected-server}"
-    local _port="${4:-5000}"
+    local _user="${2? Missing user name or uid for the container we want to stop!!!}"
+    local _port="${3? Missing http port for the container we want to stop!!!}"
+    local _server_name="${4? Missing server name for the container we want to stop!!!}"
+    local _container_name="nodejs-express-${_user}-${_server_name}-${_port}"
 
     sudo docker run \
         -it \
@@ -39,36 +31,59 @@ function Create_Docker_Container
         --env-file .env \
         --env "SERVER_NAME=server/${_server_name}.js" \
         --env "HTTP_PORT=${_port}" \
-        --name "nodejs-express-${_server_name}-port-${_port}" \
+        --name "${_container_name}" \
         --publish "127.0.0.1:${_port}:5000" \
         --workdir "/home/node/workspace" \
         --volume "$PWD:/home/node/workspace" \
         approov/nodejs-express ${_command}
 }
 
-if [ "${ARG1}" == "build" ]
-    then
-        sudo docker build -t approov/nodejs-express ./docker
-        exit 0
-fi
+function Stop_Docker_Container
+{
+    local _user="${1? Missing user name or uid for the container we want to stop!!!}"
+    local _port="${2? Missing http port for the container we want to stop!!!}"
+    local _server_name="${3? Missing server name for the container we want to stop!!!}"
+    local _container_name="nodejs-express-${_user}-${_server_name}-${_port}"
 
-if [ "${ARG1}" == "up" ] && [ "${ARG2}" == "approov-protected-server" ]
-    then
-        Create_Docker_Container "npm start" "${_USER}" "approov-protected-server" "${ARG3:-5000}"
-        exit 0
-fi
+    sudo docker container stop "${_container_name}"
+}
 
-if [ "${ARG1}" == "up" ] && [ "${ARG2}" == "original-server" ]
-    then
-        Create_Docker_Container "node server/original-server.js" "${_USER}" "original-server" "${ARG3:-5001}"
-        exit 0
-fi
-
-if [ "${ARG1}" == "start" ] && [ "${ARG2}" == "shell" ]
-    then
-        Start_User_Shell "${ARG3}" "${ARG4}"
-        exit 0
-fi
-
+for input in "${@}"
+    do
+        case "${input}" in
+            build)
+                Build_Docker_Image
+                exit 0
+                ;;
+            -p | --port)
+                HTTP_PORT="${2? Missing HTTP port to access the container in localhost}"
+                shift 2
+                ;;
+            -u | --user)
+                CONTAINER_USER="${2? Missing user name or uid to use inside the container}"
+                shift 2
+                ;;
+            approov-protected-server)
+                Create_Docker_Container "npm start" "${CONTAINER_USER}" "${HTTP_PORT}" "approov-protected-server"
+                exit 0
+                ;;
+            original-server)
+                Create_Docker_Container "node server/original-server.js" "${CONTAINER_USER}" "${HTTP_PORT}" "original-server"
+                exit 0
+                ;;
+            stop)
+                Stop_Docker_Container "${CONTAINER_USER}" "${HTTP_PORT}" "${2:-approov-protected-server}"
+                exit 0
+                ;;
+            shell)
+                Create_Docker_Container "${2:-zsh}" "${CONTAINER_USER}" "${HTTP_PORT}" "${3:-approov-protected-server}"
+                exit 0
+                ;;
+            -h | --help)
+                Show_Help
+                exit 0
+                ;;
+        esac
+done
 
 Show_Help
