@@ -96,22 +96,6 @@ walk-through, but feel free to use your local environment to play with this
 Approov integration.
 
 
-## HOW TO USE THE POSTMAN COLLECTION
-
-This [Postman collection](./postman/shapes-demo-server.postman_collection.json)
-contains all the API endpoints and is useful to help us playing with the API and
-have a better understanding how the Approov integration works.
-
-The Approov tokens used in the headers where generated with
-[this helper script](./server/test/helpers/generate-token.py) and they cover all
-necessary scenarios, but feel free to use the script to generate valid and
-invalid tokens with different expire times and custom payload claims.
-
-We recommend you to go over the
-[Approov Shapes Demo Server](./docs/approov-shapes-demo-server.md) walk-through
-to have a better understanding how the Postman collection is used.
-
-
 ## THE POSTMAN COLLECTION
 
 Import this [Postman collection](https://gitlab.com/snippets/1799104/raw) that
