@@ -134,30 +134,33 @@ logged, if logging is enabled.
 ### The logs
 
 When a request is issued from Postman you can see the logs being printed to your
-shell and you can search for `INFO:approov-protected-server:` to see
-all log entries about requests protected by Approov and compare the logged
-messages with the results returned to Postman for failures or success in
-the validation of requests protected by Approov.
+shell and you can search for `approov-protected-server` to see all log entries
+about requests protected by Approov and compare the logged messages with the
+results returned to Postman for failures or success in the validation of
+requests protected by Approov.
 
 An example for an accepted request:
 
 ```bash
-approov-protected-server 200 GET /forms ACCEPTED REQUEST WITH VALID APPROOV TOKEN +17s
-approov-protected-server 200 GET /forms ACCEPTED REQUEST WITH VALID CUSTOM PAYLOAD CLAIM IN THE APPROOV TOKEN +1ms
+approov-protected-server 200 GET /forms ACCEPTED REQUEST WITH VALID APPROOV TOKEN +14s
+approov-protected-server 200 GET /forms ACCEPTED REQUEST WITH VALID CLAIM VALUE +0ms
 ```
 
-Example for a rejected requests:
+Examples for rejected requests:
 
 ```bash
 # example 1
-approov-protected-server 200 GET /forms ACCEPTED REQUEST WITH VALID APPROOV TOKEN +16s
-approov-protected-server 400 GET /forms REJECTED REQUEST WITH INVALID CUSTOM PAYLOAD CLAIM IN THE APPROOV TOKEN +0ms
+approov-protected-server 200 GET /forms ACCEPTED REQUEST WITH VALID APPROOV TOKEN +9s
+approov-protected-server 200 GET /forms REQUEST WITH CLAIM VALUE NOT MATCHING THE CUSTOM PAYLOAD CLAIM IN THE APPROOV TOKEN +0ms
+approov-protected-server 400 GET /forms REJECTED REQUEST WITH INVALID CLAIM VALUE +0ms
 
 # example 2
-approov-protected-server 200 GET /forms REJECTED REQUEST WITH INVALID APPROOV TOKEN | UnauthorizedError: jwt malformed +23s
+approov-protected-server 200 GET /forms APPROOV TOKEN ERROR: UnauthorizedError: jwt malformed +2m
+approov-protected-server 400 GET /forms REJECTED REQUEST WITH INVALID APPROOV TOKEN +0ms
 
 # example 3
-approov-protected-server 200 GET /forms REJECTED REQUEST WITH INVALID APPROOV TOKEN | UnauthorizedError: No authorization token was found +12s
+approov-protected-server 200 GET /forms APPROOV TOKEN ERROR: UnauthorizedError: No authorization token was found +6s
+approov-protected-server 400 GET /forms REJECTED REQUEST WITH INVALID APPROOV TOKEN +1ms
 ```
 
 ### Starting Postman
@@ -219,10 +222,23 @@ Feel free to try all the options...
 
 ### Starting the NodeJS Express server
 
+Before we start the server we will want to setup the debug level to be used accross all restarts:
+
+```
+export DEBUG=approov-protected-server
+```
+
+Confirming that is properly set:
+
+```
+$ echo $DEBUG
+approov-protected-server
+```
+
 To start the server we want to issue the command:
 
 ```bash
-DEBUG=approov-protected-server npm start
+npm start
 ```
 
 ### Endpoint Not Protected by Approov
@@ -272,7 +288,7 @@ Make sure that the `.env` file contains `APPROOV_ABORT_REQUEST_ON_INVALID_TOKEN`
 Cancel current server session with `ctrl+c` and start it again with:
 
 ```bash
-DEBUG=approov-protected-server npm start
+npm start
 ```
 
 **Postman view:**
@@ -300,7 +316,7 @@ Make sure that the `.env` file contains `APPROOV_ABORT_REQUEST_ON_INVALID_TOKEN`
 Cancel current server session with `ctrl+c` and start it again with:
 
 ```bash
-DEBUG=approov-protected-server npm start
+npm start
 ```
 
 **Postman view:**
@@ -332,7 +348,7 @@ Make sure that the `.env` file contains `APPROOV_ABORT_REQUEST_ON_INVALID_TOKEN`
 Cancel current server session with `ctrl+c` and start it again with:
 
 ```bash
-DEBUG=approov-protected-server npm start
+npm start
 ```
 
 **Postman view:**
@@ -363,7 +379,7 @@ Make sure that the `.env` file contains `APPROOV_ABORT_REQUEST_ON_INVALID_TOKEN`
 Cancel current server session with `ctrl+c` and start it again with:
 
 ```bash
-DEBUG=approov-protected-server npm start
+npm start
 ```
 
 **Postman view:**
@@ -393,7 +409,7 @@ Make sure that the `.env` file contains `APPROOV_ABORT_REQUEST_ON_INVALID_TOKEN`
 Cancel current server session with `ctrl+c` and start it again with:
 
 ```bash
-DEBUG=approov-protected-server npm start
+npm start
 ```
 
 > **NOTE**:
@@ -436,7 +452,7 @@ Make sure that the `.env` file contains `APPROOV_ABORT_REQUEST_ON_INVALID_TOKEN`
 Cancel current server session with `ctrl+c` and start it again with:
 
 ```bash
-DEBUG=approov-protected-server npm start
+npm start
 ```
 **Postman view with token valid for 1 minute:**
 
@@ -484,7 +500,7 @@ and `APPROOV_ABORT_REQUEST_ON_INVALID_CUSTOM_PAYLOAD_CLAIM` set to `true`.
 Cancel current server session with `ctrl+c` and start it again with:
 
 ```bash
-DEBUG=approov-protected-server npm start
+npm start
 ```
 
 **Postman view:**
@@ -521,7 +537,7 @@ and `APPROOV_ABORT_REQUEST_ON_INVALID_CUSTOM_PAYLOAD_CLAIM` set to `false`.
 Cancel current server session with `ctrl+c` and start it again with:
 
 ```bash
-DEBUG=approov-protected-server npm start
+npm start
 ```
 
 **Postman view:**
@@ -550,7 +566,7 @@ and `APPROOV_ABORT_REQUEST_ON_INVALID_CUSTOM_PAYLOAD_CLAIM` set to `true`.
 Cancel current server session with `ctrl+c` and start it again with:
 
 ```bash
-DEBUG=approov-protected-server npm start
+npm start
 ```
 
 **Postman view:**

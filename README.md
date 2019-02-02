@@ -46,7 +46,6 @@ Dummy example for the JWT token middle part, the payload:
 ```
 {
     "exp": 123456789, # required - the timestamp for when the token expires.
-    "iss":"failover", # optional - only included in tokens from the failover; the value is always “failover”.
     "pay":"f3U2fniBJVE04Tdecj0d6orV9qT9t52TjfHxdUqDBgY=" # optional - a sha256 hash of the claim, encoded with base64.
 }
 ```
@@ -204,7 +203,7 @@ APPROOV_LOGGING_ENABLED=true
 ```
 
 
-Now we can read them from our code, like is done in the [configuration file](./server/configuration.js#L31-61):
+Now we can read them from our code, like is done in the [configuration file](./server/configuration.js#L31-L61):
 
 ```js
 // file: configuration.js
@@ -257,7 +256,7 @@ module.exports = {
 This are callbacks used in the Approov Integration that you may want to
 customize to the needs of your application.
 
-Lets's start with the logging callback that we can see in [approov-protected-server.js](./server/approov-protected-server.js#L53-56):
+Lets's start with the logging callback that we can see in [approov-protected-server.js](./server/approov-protected-server.js#L53-L56):
 
 ```js
 // file: approov-protected-server.js
@@ -269,7 +268,7 @@ const logApproov = function(req, res, message) {
 ```
 
 Next we have the callback to get the claim value that we want to compare against
-the custom payload claim in the Approov token, as see in [approov-protected-server.js](./server/approov-protected-server.js#L58-64):
+the custom payload claim in the Approov token, as see in [approov-protected-server.js](./server/approov-protected-server.js#L58-L64):
 
 ```js
 // file: approov-protected-server.js
@@ -284,7 +283,7 @@ const getClaimValueFromRequest = function(req) {
 ```
 
 Each time an Approov token doesn't validate for any reason the Approov
-integration will pass the control to the application logic by invoking a callback as the one defined in [approov-protected-server.js](./server/approov-protected-server.js#L66-87):
+integration will pass the control to the application logic by invoking a callback as the one defined in [approov-protected-server.js](./server/approov-protected-server.js#L66-L88):
 
 ```js
 // file: approov-protected-server.js
@@ -301,8 +300,9 @@ const handlesRequestWithInvalidApproovToken = function(err, req, res, next) {
 
   if (config.approov.abortRequestOnInvalidToken === true) {
     message = 'REJECTED ' + message
+    res.status(400)
     logApproov(req, res, message)
-    res.status(400).json({})
+    res.json({})
     return
   }
 
@@ -316,7 +316,7 @@ const handlesRequestWithInvalidApproovToken = function(err, req, res, next) {
 The last customizable callback will be invoked by the Approov integration to
 allow the application to decide what action to take when the request claim value
 doesn't match the custom payload claim value in the Approov token, as defined in
-[approov-protected-server.js](./server/approov-protected-server.js#L89-111):
+[approov-protected-server.js](./server/approov-protected-server.js#L90-L113):
 
 ```js
 // file: approov-protected-server.js
@@ -329,13 +329,14 @@ doesn't match the custom payload claim value in the Approov token, as defined in
 const handlesRequestWithInvalidClaimValue = function(req, res, next) {
 
   // Logging here to make clear in the logs what was the action we took.
-  // Feel free to skip it if you think is not necessary to your use case.
+  // Fseel free to skip it if you think is not necessary to your use case.
   let message = 'REQUEST WITH INVALID CLAIM VALUE'
 
   if (config.approov.abortRequestOnInvalidCustomPayloadClaim === true) {
     message = 'REJECTED ' + message
+    res.status(400)
     logApproov(req, res, message)
-    res.status(400).json({})
+    res.json({})
     return
   }
 
@@ -355,7 +356,7 @@ need of being customized.
 #### Helper Functions
 
 The core callbacks will need some very basic helper functions, like the ones
-defined in the [approov-protected-server](./server/approov-protected-server.js#L125-135):
+defined in the [approov-protected-server](./server/approov-protected-server.js#L125-L137):
 
 ```js
 // file: approov-protected-server.js
@@ -375,7 +376,7 @@ const isEmptyString = function(value) {
 
 #### Approov Token
 
-[This callback](./server/approov-protected-server.js#L141-150) will be used in the
+[This callback](./server/approov-protected-server.js#L143-L152) will be used in the
 middleware to check the Approov token:
 
 ```js
@@ -393,7 +394,7 @@ const checkApproovToken = jwt({
 })
 ```
 
-Then we need [this callback](./server/approov-protected-server.js#L152-166) to
+Then we need [this callback](./server/approov-protected-server.js#L154-L168) to
 handle any error that may occur during the Approov token check:
 
 ```js
@@ -417,7 +418,7 @@ const handlesApproovTokenError = function(err, req, res, next) {
 ```
 
 Finally we want to handle when the Approov token succeeds the validation process,
-as we have done [approov-protected-server.js](./server/approov-protected-server.js#L168-176)
+as we have done [approov-protected-server.js](./server/approov-protected-server.js#L170-L178)
 
 ```js
 // file: approov-protected-server.js
@@ -437,7 +438,7 @@ const handlesApproovTokenSuccess = function(req, res, next) {
 
 We will use this two functions to validate if the claim value in the request
 matches the custom payload claim in the Approov token, as we can see in the
-[approov-protected-server.js](./server/approov-protected-server.js#L182-241):
+[approov-protected-server.js](./server/approov-protected-server.js#L182-L241):
 
 ```js
 // file: approov-protected-server.js
@@ -511,7 +512,7 @@ const checkApproovTokenCustomPayloadClaim = function(req, res, next){
 We will use the middleware approach to intercept all endpoints we want to protect
 with an Approov Token. So any interceptor must be placed before we declare the
 endpoints  we want to protect, like is done in the
-[approov-protected-server.js](./server/approov-protected-server.js#L165-186).
+[approov-protected-server.js](./server/approov-protected-server.js#L165-L186).
 
 The following examples will use the callbacks we already have defined
 [here](#approov-integration-core-callbacks) to pass as the second parameter to
@@ -520,7 +521,7 @@ the middleware interceptors.
 #### For specific endpoints
 
 To protect specific endpoints in a current server we only need to add the Approov
-interceptors for each endpoint we want to protect, as we have done [here](./server/approov-protected-server.js#L245-266):
+interceptors for each endpoint we want to protect, as we have done [here](./server/approov-protected-server.js#L245-L266):
 
 ```js
 // file: approov-protected-server.js
@@ -588,7 +589,7 @@ this file difference:
  const config = require('./configuration')
  const https = require('https')
  const fs = require('fs')
-@@ -41,6 +43,237 @@
+@@ -41,6 +43,239 @@
  }
 
 
@@ -624,8 +625,9 @@ this file difference:
 +
 +  if (config.approov.abortRequestOnInvalidToken === true) {
 +    message = 'REJECTED ' + message
++    res.status(400)
 +    logApproov(req, res, message)
-+    res.status(400).json({})
++    res.json({})
 +    return
 +  }
 +
@@ -648,8 +650,9 @@ this file difference:
 +
 +  if (config.approov.abortRequestOnInvalidCustomPayloadClaim === true) {
 +    message = 'REJECTED ' + message
++    res.status(400)
 +    logApproov(req, res, message)
-+    res.status(400).json({})
++    res.json({})
 +    return
 +  }
 +
@@ -701,10 +704,10 @@ this file difference:
 +// Callback to handle the errors occurred while checking the Approov token.
 +const handlesApproovTokenError = function(err, req, res, next) {
 +
-+  message = 'APPROOV TOKEN ERROR: ' + err
-+  logApproov(req, res, message)
-+
 +  if (err.name === 'UnauthorizedError') {
++    message = 'APPROOV TOKEN ERROR: ' + err
++    logApproov(req, res, message)
++
 +    req.approovTokenError = true
 +    handlesRequestWithInvalidApproovToken(err, req, res, next)
 +    return
@@ -826,7 +829,7 @@ this file difference:
  ////////////////
  // ENDPOINTS
  ////////////////
-@@ -64,13 +297,11 @@
+@@ -64,13 +299,11 @@
 
  // shapes endpoint returns a random shape.
  app.get('/shapes', function(req, res, next) {

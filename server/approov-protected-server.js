@@ -75,8 +75,9 @@ const handlesRequestWithInvalidApproovToken = function(err, req, res, next) {
 
   if (config.approov.abortRequestOnInvalidToken === true) {
     message = 'REJECTED ' + message
+    res.status(400)
     logApproov(req, res, message)
-    res.status(400).json({})
+    res.json({})
     return
   }
 
@@ -99,8 +100,9 @@ const handlesRequestWithInvalidClaimValue = function(req, res, next) {
 
   if (config.approov.abortRequestOnInvalidCustomPayloadClaim === true) {
     message = 'REJECTED ' + message
+    res.status(400)
     logApproov(req, res, message)
-    res.status(400).json({})
+    res.json({})
     return
   }
 

@@ -1,4 +1,4 @@
-const debug = require('debug')('approov-protected-server:configuration')
+const debug = require('debug')('approov-protected-server')
 const dotenv = require('dotenv').config()
 
 if (dotenv.error) {
