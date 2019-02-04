@@ -2,108 +2,88 @@
 
 set -eu
 
-_USER="$(id -un)"
+CONTAINER_USER="$(id -u)"
 
-ARG1=${1:---help}
+HTTP_PORT=5000
 
-ARG2=${2:-""}
-
-ARG3=${3:-""}
-
-ARG4=${4:-""}
-
-mkdir -p ~/.docker-postman/collections && mkdir -p ~/.docker-postman/.config/Postman
-
-function Start_New_Browser
+function Show_Help
 {
-    printf "\n>>> STARTING NEW BROWSER INSTANCE FOR: ${@} <<<\n"
-    sudo docker-compose exec -d server firefox --new-instance "${@}"
+    echo && cat ./docker/usage-help.txt && echo
 }
 
-function Open_Browser_Tab
+function Build_Docker_Image()
 {
-    local _url="${url:?Missing url to open in the browser!}"
-
-    printf "\n>>> OPEN TAB IN BROWSER FOR: ${_url} <<<\n"
-    sudo docker-compose exec -d server firefox "${_url}"
+  sudo docker build -t approov/nodejs-express ./docker
 }
 
-function Run_User_Shell
+function Create_Docker_Container
 {
-    local _user="${1:-1000}"
-    local _shell="${2:-zsh}"
+    local _command="${1:-zsh}"
+    local _user="${2? Missing user name or uid for the container we want to stop!!!}"
+    local _port="${3? Missing http port for the container we want to stop!!!}"
+    local _server_name="${4? Missing server name for the container we want to stop!!!}"
+    local _container_name="nodejs-express-${_user}-${_server_name}-${_port}"
 
-    sudo docker-compose run --rm --service-ports -u "${_user}" server "${_shell}"
+    sudo docker run \
+        -it \
+        --rm \
+        --user "${_user}" \
+        --env-file .env \
+        --env "SERVER_NAME=server/${_server_name}.js" \
+        --env "HTTP_PORT=${_port}" \
+        --name "${_container_name}" \
+        --publish "127.0.0.1:${_port}:5000" \
+        --workdir "/home/node/workspace" \
+        --volume "$PWD:/home/node/workspace" \
+        approov/nodejs-express ${_command}
 }
 
-
-function Start_User_Shell
+function Stop_Docker_Container
 {
-    local _user="${1:-1000}"
-    local _shell="${2:-zsh}"
+    local _user="${1? Missing user name or uid for the container we want to stop!!!}"
+    local _port="${2? Missing http port for the container we want to stop!!!}"
+    local _server_name="${3? Missing server name for the container we want to stop!!!}"
+    local _container_name="nodejs-express-${_user}-${_server_name}-${_port}"
 
-    sudo docker-compose run --rm --service-ports -u "${_user}" server "${_shell}"
+    sudo docker container stop "${_container_name}"
 }
 
-function Execute_User_Shell
-{
-    local _user="${1:-1000}"
-    local _shell="${2:-zsh}"
+for input in "${@}"
+    do
+        case "${input}" in
+            build)
+                Build_Docker_Image
+                exit 0
+                ;;
+            -p | --port)
+                HTTP_PORT="${2? Missing HTTP port to access the container in localhost}"
+                shift 2
+                ;;
+            -u | --user)
+                CONTAINER_USER="${2? Missing user name or uid to use inside the container}"
+                shift 2
+                ;;
+            approov-protected-server)
+                Create_Docker_Container "npm start" "${CONTAINER_USER}" "${HTTP_PORT}" "approov-protected-server"
+                exit 0
+                ;;
+            original-server)
+                Create_Docker_Container "node server/original-server.js" "${CONTAINER_USER}" "${HTTP_PORT}" "original-server"
+                exit 0
+                ;;
+            stop)
+                Stop_Docker_Container "${CONTAINER_USER}" "${HTTP_PORT}" "${2:-approov-protected-server}"
+                exit 0
+                ;;
+            shell)
+                Create_Docker_Container "${2:-zsh}" "${CONTAINER_USER}" "${HTTP_PORT}" "${3:-approov-protected-server}"
+                exit 0
+                ;;
+            -h | --help)
+                Show_Help
+                exit 0
+                ;;
+        esac
+done
 
-    sudo docker-compose exec -u "${_user}" server "${_shell}"
-}
-
-function Start_Proxy_Server
-{
-    printf "\n>>> STARTING PROXY SERVER <<<\n"
-    sudo docker-compose exec -d server mitmweb --ignore-hosts ".*auth0.*" --ignore-hosts ".*google.*" --web-iface 0.0.0.0
-    sleep 8
-    Open_Browser_Tab "http://localhost:8081"
-}
-
-function Start_Node_Server {
-    sudo docker-compose up -d --entrypoint 'bash -c "cd server && DEBUG=* npm start"' server
-}
-
-function Start_Demo {
-
-    printf "\n---> Starting Postman \n"
-    sudo docker-compose up -d server
-
-    printf "\n---> Starting Node Server \n"
-    sudo docker-compose exec server bash -c "cd /home/node/workspace/server && npm start"
-}
-
-if [ "${ARG1}" == "up" ] && [ "${ARG2}" == "demo" ]
-    then
-        Start_Demo
-        exit 0
-fi
-
-if [ "${ARG1}" == "up" ] && [ "${ARG2}" == "proxy" ]
-    then
-        Start_Proxy_Server
-        exit 0
-fi
-
-if [ "${ARG1}" == "shell" ]
-    then
-        Run_User_Shell "${ARG2}" "${ARG3}"
-        exit 0
-fi
-
-if [ "${ARG1}" == "exec" ] && [ "${ARG2}" == "shell" ]
-    then
-        Execute_User_Shell "${ARG3}" "${ARG4}"
-        exit 0
-fi
-
-
-
-if [ "${ARG1}" == "proxy" ]
-    then
-        Start_Proxy_Server
-        exit 0
-fi
-
-sudo docker-compose "${@}"
+Show_Help
