@@ -161,7 +161,7 @@ We need to require the dependencies we installed before.
 require('dotenv').config()
 ```
 
-[Approov Protected Server file](./server/configuration.js#L1):
+[Approov Protected Server file](./server/approov-protected-server.js#L2-L3):
 
 ```js
 // file: approov-protected-server.js
@@ -422,7 +422,7 @@ const handlesApproovTokenSuccess = function(req, res, next) {
 
 We will use this two functions to validate if the claim value in the request
 matches the custom payload claim in the Approov token, as we can see in the
-[approov-protected-server.js](./server/approov-protected-server.js#L182-L241):
+[approov-protected-server.js](./server/approov-protected-server.js#L184-L243):
 
 ```js
 // file: approov-protected-server.js
@@ -496,7 +496,7 @@ const checkApproovTokenCustomPayloadClaim = function(req, res, next){
 We will use the middleware approach to intercept all endpoints we want to protect
 with an Approov Token. So any interceptor must be placed before we declare the
 endpoints  we want to protect, like is done in the
-[approov-protected-server.js](./server/approov-protected-server.js#L165-L186).
+[approov-protected-server.js](./server/approov-protected-server.js#L247-L273).
 
 The following examples will use the callbacks we already have defined
 [here](#approov-integration-core-callbacks) to pass as the second parameter to
@@ -505,7 +505,7 @@ the middleware interceptors.
 #### For specific endpoints
 
 To protect specific endpoints in a current server we only need to add the Approov
-interceptors for each endpoint we want to protect, as we have done [here](./server/approov-protected-server.js#L245-L266):
+interceptors for each endpoint we want to protect, as we have done [here](./server/approov-protected-server.js#L247-L273):
 
 ```js
 // file: approov-protected-server.js
