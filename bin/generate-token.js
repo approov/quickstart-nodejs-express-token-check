@@ -22,9 +22,16 @@ const args = require('minimist')(process.argv.slice(2))
 
 const claimExample = 'f3U2fniBJVE04Tdecj0d6orV9qT9t52TjfHxdUqDBgY='
 
+const debug = require('debug')('approov-protected-server')
+const dotenv = require('dotenv').config()
+
+if (dotenv.error) {
+  debug('FAILED TO PARSE `.env` FILE | ' + dotenv.error)
+}
+
 let data = {}
 
-let secret = 'approov-base64-encoded-secret'
+let secret = Buffer.from(dotenv.parsed.APPROOV_BASE64_SECRET, 'base64')
 
 let expiresIn = '5m'
 
