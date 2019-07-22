@@ -15,7 +15,7 @@ services:
       - default
     command: "npm start"
     volumes:
-      - "$PWD:/home/node/workspace"
+      - ./:/home/node/workspace
     labels:
       - "traefik.enable=true"
       - "traefik.backend=approov-node-express-shapes-demo"
