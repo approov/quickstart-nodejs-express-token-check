@@ -10,18 +10,33 @@ if (dotenv.error) {
 /// SERVER ENVIRONMENT
 ////////////////////////
 
+const env = dotenv.parsed.ENV || 'production'
 const httpProtocol = dotenv.parsed.HTTP_PROTOCOL || 'http'
 const hostName = dotenv.parsed.SERVER_HOSTNAME || 'localhost'
 const httpPort = dotenv.parsed.HTTP_PORT || '5000'
 const url = httpProtocol + '://' + hostName
 const certificatesPath = dotenv.parsed.CERTIFICATES_PATH || "/home/node/.ssl"
 
+const fullUrl = function(env, url, port) {
+
+  if (env === 'production') {
+    return url
+  }
+
+  return url + ':' + port
+}
+
+if (env !== 'production') {
+
+}
+
 const server = {
+  env: env,
   hostName: hostName,
   httpProtocol: httpProtocol,
   httpPort: httpPort,
   url: url,
-  fullUrl: url + ':' + httpPort,
+  fullUrl: fullUrl(env, url, httpPort),
   httpsEnabled: (httpProtocol === 'https'),
   certificateKey: certificatesPath + "/" + hostName + ".key",
   certificatePem: certificatesPath + "/" + hostName + ".pem"
