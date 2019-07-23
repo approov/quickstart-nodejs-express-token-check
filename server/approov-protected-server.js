@@ -6,9 +6,13 @@ const https = require('https')
 const fs = require('fs')
 const express = require('express')
 const cors = require('cors')
+const path = require('path')
 const app = express()
 app.use(cors())
 
+const BAD_REQUEST_RESPONSE = {
+  status: "Bad Request"
+}
 
 ////////////////
 /// FUNCTIONS
@@ -29,7 +33,9 @@ const getRandomShapeResponse = function() {
     'Square',
     'Rectangle'
   ]
-  return {"shape": shapes[Math.floor((Math.random() * shapes.length))]}
+  return {
+    shape: shapes[Math.floor((Math.random() * shapes.length))]
+  }
 }
 
 const getRandomFormResponse = function() {
@@ -60,7 +66,7 @@ const logApproov = function(req, res, message) {
 // In the current scenario we use an Oauth2 token, but feel free to use what
 // suits best your needs.
 const getClaimValueFromRequest = function(req) {
-  return req.get('oauth2-token')
+  return req.get('Authorization')
 }
 
 // Callback to be customized with how you want to handle a request with an
@@ -77,7 +83,7 @@ const handlesRequestWithInvalidApproovToken = function(err, req, res, next) {
     message = 'REJECTED ' + message
     res.status(400)
     logApproov(req, res, message)
-    res.json({})
+    res.json(BAD_REQUEST_RESPONSE)
     return
   }
 
@@ -102,7 +108,9 @@ const handlesRequestWithInvalidClaimValue = function(req, res, next) {
     message = 'REJECTED ' + message
     res.status(400)
     logApproov(req, res, message)
-    res.json({})
+
+    res.json(BAD_REQUEST_RESPONSE)
+
     return
   }
 
@@ -178,7 +186,7 @@ const handlesApproovTokenSuccess = function(req, res, next) {
 }
 
 
-////// CUSTOM PAYLOAD CLAIN IN THE APPROOV TOKEN //////
+////// CUSTOM PAYLOAD CLAIM IN THE APPROOV TOKEN //////
 
 
 // Validates if the Approov contains the same claim has in the request
@@ -245,27 +253,27 @@ const checkApproovTokenCustomPayloadClaim = function(req, res, next){
 /////// THE APPROOV INTERCEPTORS ///////
 
 // Intercepts all calls to the shapes endpoint to validate the Approov token.
-app.use('/shapes', checkApproovToken)
+app.use('/v2/shapes', checkApproovToken)
 
 // Handles failure in validating the Approov token
-app.use('/shapes', handlesApproovTokenError)
+app.use('/v2/shapes', handlesApproovTokenError)
 
 // Handles requests where the Approov token is a valid one.
-app.use('/shapes', handlesApproovTokenSuccess)
+app.use('/v2/shapes', handlesApproovTokenSuccess)
 
 // Intercepts all calls to the forms endpoint to validate the Approov token.
-app.use('/forms', checkApproovToken)
+app.use('/v2/forms', checkApproovToken)
 
 // Handles failure in validating the Approov token
-app.use('/forms', handlesApproovTokenError)
+app.use('/v2/forms', handlesApproovTokenError)
 
 // Handles requests where the Approov token is a valid one.
-app.use('/forms', handlesApproovTokenSuccess)
+app.use('/v2/forms', handlesApproovTokenSuccess)
 
 // checks if the custom payload claim is present in the Approov token and
 // matches the claim used by the mobile app, that in this case we decided to be
 // the ouath2 token, but you may want to use another type of claim.
-app.use('/forms', checkApproovTokenCustomPayloadClaim)
+app.use('/v2/forms', checkApproovTokenCustomPayloadClaim)
 
 /// NOTE:
 ///   Is important to place all the Approov interceptors before we declare the
@@ -280,21 +288,39 @@ app.use('/forms', checkApproovTokenCustomPayloadClaim)
 // ENDPOINTS
 ////////////////
 
+const buildHelloWorldResponse = function(res) {
+  res.json({
+    text: "Hello, World!",
+    status: "Hello, World! (healthy)"
+  })
+}
+
+const buildShapesResponse = function(res, protectionStatus) {
+  const response = getRandomShapeResponse()
+  response.status =  response.shape + ` (${protectionStatus})`
+  res.json(response)
+}
+
+const buildFormsResponse = function(res, protectionStatus) {
+  const response = getRandomFormResponse()
+  response.status =  response.form + ` (${protectionStatus})`
+  res.json(response)
+}
+
+/**
+ * V0 ENDPOINTS
+ */
+
 // the index endpoint
 app.get('/', function(req, res, next) {
-  const links = {
-    hello: config.server.fullUrl + "/hello",
-    shapes: config.server.fullUrl + "/shapes",
-    forms: config.server.fullUrl + "/forms",
-  }
   logResponseToRequest(req, res)
-  res.status(200).json(links)
+  res.sendFile(path.join(__dirname + '/index.html'));
 })
 
 // simple 'hello world' endpoint.
 app.get('/hello', function (req, res, next) {
   logResponseToRequest(req, res)
-  res.json({ text: "Hello World!" })
+  res.send("Hello, World!")
 })
 
 // shapes endpoint returns a random shape.
@@ -305,6 +331,46 @@ app.get('/shapes', function(req, res, next) {
 // shapes endpoint returns a random form.
 app.get('/forms', function(req, res, next) {
   res.json(getRandomFormResponse())
+})
+
+
+/**
+ * V1 ENDPOINTS
+ */
+
+// simple 'hello world' endpoint.
+app.get('/v1/hello', function (req, res, next) {
+  buildHelloWorldResponse(res)
+})
+
+// shapes endpoint returns a random shape.
+app.get('/v1/shapes', function(req, res, next) {
+  buildShapesResponse(res, 'unprotected')
+})
+
+// shapes endpoint returns a random form.
+app.get('/v1/forms', function(req, res, next) {
+  buildFormsResponse(res, 'unprotected')
+})
+
+
+/**
+ * V2 ENDPOINTS
+ */
+
+// simple 'hello world' endpoint.
+app.get('/v2/hello', function (req, res, next) {
+  buildHelloWorldResponse(res)
+})
+
+// shapes endpoint returns a random shape.
+app.get('/v2/shapes', function(req, res, next) {
+  buildShapesResponse(res, 'protected')
+})
+
+// shapes endpoint returns a random form.
+app.get('/v2/forms', function(req, res, next) {
+  buildFormsResponse(res, 'protected')
 })
 
 

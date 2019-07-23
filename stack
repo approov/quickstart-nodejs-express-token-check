@@ -4,7 +4,7 @@ set -eu
 
 CONTAINER_USER="$(id -u)"
 
-HTTP_PORT=5000
+HTTP_PORT=8002
 
 function Show_Help
 {
@@ -32,7 +32,7 @@ function Create_Docker_Container
         --env "SERVER_NAME=server/${_server_name}.js" \
         --env "HTTP_PORT=${_port}" \
         --name "${_container_name}" \
-        --publish "127.0.0.1:${_port}:5000" \
+        --publish "127.0.0.1:${_port}:${_port}" \
         --workdir "/home/node/workspace" \
         --volume "$PWD:/home/node/workspace" \
         approov/nodejs-express ${_command}
