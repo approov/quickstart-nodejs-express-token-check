@@ -4,6 +4,7 @@ const https = require('https')
 const fs = require('fs')
 const express = require('express')
 const cors = require('cors')
+const path = require('path')
 const app = express()
 app.use(cors())
 
@@ -27,7 +28,9 @@ const getRandomShapeResponse = function() {
     'Square',
     'Rectangle'
   ]
-  return {"shape": shapes[Math.floor((Math.random() * shapes.length))]}
+  return {
+    shape: shapes[Math.floor((Math.random() * shapes.length))]
+  }
 }
 
 const getRandomFormResponse = function() {
@@ -40,38 +43,50 @@ const getRandomFormResponse = function() {
   return {"form": forms[Math.floor((Math.random() * forms.length))]}
 }
 
+const buildHelloWorldResponse = function(res) {
+  res.json({
+    text: "Hello, World!",
+    status: "Hello, World! (healthy)"
+  })
+}
+
+const buildShapesResponse = function(res, protectionStatus) {
+  const response = getRandomShapeResponse()
+  response.status =  response.shape + ` (${protectionStatus})`
+  res.json(response)
+}
+
+const buildFormsResponse = function(res, protectionStatus) {
+  const response = getRandomFormResponse()
+  response.status =  response.form + ` (${protectionStatus})`
+  res.json(response)
+}
+
 
 ////////////////
 // ENDPOINTS
 ////////////////
 
-// the index endpoint
-app.get('/', function(req, res, next) {
-  const links = {
-    hello: config.server.fullUrl + "/hello",
-    shapes: config.server.fullUrl + "/shapes",
-    forms: config.server.fullUrl + "/forms",
-  }
-  logResponseToRequest(req, res)
-  res.status(200).json(links)
-})
+/**
+ * V1 ENDPOINTS
+ */
 
 // simple 'hello world' endpoint.
-app.get('/hello', function (req, res, next) {
+app.get('/v1/hello', function (req, res, next) {
   logResponseToRequest(req, res)
-  res.json({ text: "Hello World!" })
+  buildHelloWorldResponse(res)
 })
 
 // shapes endpoint returns a random shape.
-app.get('/shapes', function(req, res, next) {
+app.get('/v1/shapes', function(req, res, next) {
   logResponseToRequest(req, res)
-  res.json(getRandomShapeResponse())
+  buildShapesResponse(res, 'unprotected')
 })
 
 // shapes endpoint returns a random form.
-app.get('/forms', function(req, res, next) {
+app.get('/v1/forms', function(req, res, next) {
   logResponseToRequest(req, res)
-  res.json(getRandomFormResponse())
+  buildFormsResponse(res, 'unprotected')
 })
 
 
