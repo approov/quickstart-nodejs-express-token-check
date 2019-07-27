@@ -79,6 +79,4 @@ USER ${CONTAINER_USER}
 
 WORKDIR /home/${CONTAINER_USER}/workspace
 
-EXPOSE 5000
-
 CMD ["zsh"]

@@ -68,7 +68,7 @@ for input in "${@}"
                 exit 0
                 ;;
             original-server)
-                Create_Docker_Container "node server/original-server.js" "${CONTAINER_USER}" "${HTTP_PORT}" "original-server"
+                Create_Docker_Container "npm run original-server" "${CONTAINER_USER}" "${HTTP_PORT}" "original-server"
                 exit 0
                 ;;
             stop)

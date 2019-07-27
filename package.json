@@ -5,7 +5,8 @@
   "main": "server/approov-protected-server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon server/approov-protected-server.js"
+    "start": "nodemon server/approov-protected-server.js",
+    "original-server": "nodemon server/original-server.js"
   },
   "author": "CriticalBlue.com",
   "license": "Apache-2.0",
