@@ -71,7 +71,7 @@ const approov = {
   abortRequestOnInvalidCustomPayloadClaim: isToAbortOnInvalidClaim,
   approovLoggingEnabled: isApproovLoggingEnabled,
 
-  // The Approov base64 secret must be retrieved from the Approov admin portal
+  // The Approov base64 secret must be retrieved with the Approov CLI tool
   base64Secret: dotenv.parsed.APPROOV_BASE64_SECRET,
 }
 
