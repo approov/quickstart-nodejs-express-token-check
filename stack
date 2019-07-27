@@ -22,7 +22,7 @@ function Create_Docker_Container
     local _user="${2? Missing user name or uid for the container we want to stop!!!}"
     local _port="${3? Missing http port for the container we want to stop!!!}"
     local _server_name="${4? Missing server name for the container we want to stop!!!}"
-    local _container_name="nodejs-express-${_user}-${_server_name}-${_port}"
+    local _container_name="nodejs-express-${_server_name}"
 
     sudo docker run \
         -it \
@@ -43,7 +43,7 @@ function Stop_Docker_Container
     local _user="${1? Missing user name or uid for the container we want to stop!!!}"
     local _port="${2? Missing http port for the container we want to stop!!!}"
     local _server_name="${3? Missing server name for the container we want to stop!!!}"
-    local _container_name="nodejs-express-${_user}-${_server_name}-${_port}"
+    local _container_name="nodejs-express-${_server_name}"
 
     sudo docker container stop "${_container_name}"
 }

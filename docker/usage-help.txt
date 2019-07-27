@@ -1,3 +1,5 @@
+./stack
+
 DOCKER STACK CLI WRAPPER
 
 This bash script is a wrapper around docker for easier use of the docker stack
@@ -32,7 +34,6 @@ Commands/Args:
 
   stop <server>             Stops the docker container for the given server:
                               ./stack stop approov-protected-server
-                              ./stack stop --port 5001 original-server
 
   shell <name> <server>     Starts a shell in a new container:
                               ./stack shell
