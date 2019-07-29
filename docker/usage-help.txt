@@ -1,5 +1,3 @@
-./stack
-
 DOCKER STACK CLI WRAPPER
 
 This bash script is a wrapper around docker for easier use of the docker stack
