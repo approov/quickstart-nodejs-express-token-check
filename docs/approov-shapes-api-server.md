@@ -1,4 +1,4 @@
-# APPROOV SHAPES DEMO SERVER
+# APPROOV SHAPES API SERVER
 
 The Approov Shapes Demo Server contains endpoints with and without the Approov
 protection. The protected endpoints differ in the sense that one uses the
@@ -28,7 +28,7 @@ checking the Approov token and how the requested was handled.
 The demo is not in NPM, thus we need to clone it...
 
 ```bash
-git clone https://github.com/approov/nodejs-express_shapes-demo-server.git approov-demo && cd appoov-demo
+git clone https://github.com/approov/nodejs-express_shapes-api-server.git approov-demo && cd appoov-demo
 ```
 
 ### Development Environment
@@ -166,7 +166,7 @@ approov-protected-server 400 GET /v2/forms REJECTED REQUEST WITH INVALID APPROOV
 
 ### Starting Postman
 
-Open Postman and import [this collection](https://gitlab.com/snippets/1799104/raw)
+Open Postman and import [this collection](https://gitlab.com/snippets/1879670/raw)
 that contains all the API endpoints prepared with all scenarios we want to
 demonstrate.
 
