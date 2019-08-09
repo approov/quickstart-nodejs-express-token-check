@@ -46,19 +46,16 @@ const getRandomFormResponse = function() {
 const buildHelloWorldResponse = function(res) {
   res.json({
     text: "Hello, World!",
-    status: "Hello, World! (healthy)"
   })
 }
 
 const buildShapesResponse = function(res, protectionStatus) {
   const response = getRandomShapeResponse()
-  response.status =  response.shape + ` (${protectionStatus})`
   res.json(response)
 }
 
 const buildFormsResponse = function(res, protectionStatus) {
   const response = getRandomFormResponse()
-  response.status =  response.form + ` (${protectionStatus})`
   res.json(response)
 }
 
@@ -115,4 +112,3 @@ if (config.server.httpsEnabled) {
     debug("Shapes server listening on %s", config.server.fullUrl)
   })
 }
-

@@ -48,18 +48,18 @@ const server = {
 //////////////////////////
 
 let isToAbortRequestOnInvalidToken = true
-let isToAbortOnInvalidClaim = true
+let isToAbortOnInvalidBinding = true
 let isApproovLoggingEnabled = true
 const abortRequestOnInvalidToken = dotenv.parsed.APPROOV_ABORT_REQUEST_ON_INVALID_TOKEN || 'true'
-const abortOnInvalidClaim = dotenv.parsed.APPROOV_ABORT_REQUEST_ON_INVALID_CUSTOM_PAYLOAD_CLAIM || 'true'
+const abortOnInvalidTokenBinding = dotenv.parsed.APPROOV_ABORT_REQUEST_ON_INVALID_TOKEN_BINDING || 'true'
 const approovLoggingEnabled = dotenv.parsed.APPROOV_LOGGING_ENABLED || 'true'
 
 if (abortRequestOnInvalidToken.toLowerCase() === 'false') {
   isToAbortRequestOnInvalidToken = false
 }
 
-if (abortOnInvalidClaim.toLowerCase() === 'false') {
-  isToAbortOnInvalidClaim = false
+if (abortOnInvalidTokenBinding.toLowerCase() === 'false') {
+  isToAbortOnInvalidBinding = false
 }
 
 if (approovLoggingEnabled.toLowerCase() === 'false') {
@@ -68,7 +68,7 @@ if (approovLoggingEnabled.toLowerCase() === 'false') {
 
 const approov = {
   abortRequestOnInvalidToken: isToAbortRequestOnInvalidToken,
-  abortRequestOnInvalidCustomPayloadClaim: isToAbortOnInvalidClaim,
+  abortRequestOnInvalidTokenBinding: isToAbortOnInvalidBinding,
   approovLoggingEnabled: isApproovLoggingEnabled,
 
   // The Approov base64 secret must be retrieved with the Approov CLI tool
