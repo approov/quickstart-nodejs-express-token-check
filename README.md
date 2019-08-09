@@ -246,8 +246,7 @@ const logApproov = function(req, res, message) {
 }
 ```
 
-Next we have the callback to get the claim value that we want to compare against
-the custom payload claim in the Approov token, as see in [approov-protected-server.js](./server/approov-protected-server.js#L77-L83):
+Next we have the callback to get the token binding header for the Approov token, as seen in [approov-protected-server.js](./server/approov-protected-server.js#L77-L83):
 
 ```js
 // file: approov-protected-server.js
@@ -531,9 +530,8 @@ app.use('/v2/forms', handlesApproovTokenError)
 // Handles requests where the Approov token is a valid one.
 app.use('/v2/forms', handlesApproovTokenSuccess)
 
-// checks if the custom payload claim is present in the Approov token and
-// matches the claim used by the mobile app, that in this case we decided to be
-// the Authorization token, but you may want to use another type of claim.
+// Checks if the Approov token binding is valid and aborts the request when the environment variable
+// APPROOV_ABORT_REQUEST_ON_INVALID_TOKEN_BINDING is set to true in the environment file.
 app.use('/v2/forms', handlesApproovTokenBindingVerification)
 ```
 
@@ -578,7 +576,7 @@ this file difference:
  const config = require('./configuration')
  const https = require('https')
  const fs = require('fs')
-@@ -60,6 +62,244 @@
+@@ -60,6 +62,243 @@
  }
 
 
@@ -735,7 +733,7 @@ this file difference:
 +}
 +
 +
-+////// CUSTOM PAYLOAD CLAIM IN THE APPROOV TOKEN //////
++////// APPROOV TOKEN BINDING //////
 +
 +
 +// Callback to check the Approov token binding in the header matches with the one in the key `pay` of the Approov token claims.
@@ -806,9 +804,8 @@ this file difference:
 +// Handles requests where the Approov token is a valid one.
 +app.use('/v2/forms', handlesApproovTokenSuccess)
 +
-+// checks if the custom payload claim is present in the Approov token and
-+// matches the claim used by the mobile app, that in this case we decided to be
-+// the Authorization token, but you may want to use another type of claim.
++// Checks if the Approov token binding is valid and aborts the request when the environment variable
++// APPROOV_ABORT_REQUEST_ON_INVALID_TOKEN_BINDING is set to true in the environment file.
 +app.use('/v2/forms', handlesApproovTokenBindingVerification)
 +
 +/// NOTE:
@@ -823,7 +820,7 @@ this file difference:
  ////////////////
  // ENDPOINTS
  ////////////////
-@@ -84,6 +324,28 @@
+@@ -84,6 +323,28 @@
  app.get('/v1/forms', function(req, res, next) {
    logResponseToRequest(req, res)
    buildFormsResponse(res, 'unprotected')

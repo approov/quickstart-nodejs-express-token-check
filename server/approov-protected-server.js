@@ -215,7 +215,7 @@ const handlesApproovTokenSuccess = function(req, res, next) {
 }
 
 
-////// CUSTOM PAYLOAD CLAIM IN THE APPROOV TOKEN //////
+////// APPROOV TOKEN BINDING //////
 
 
 // Callback to check the Approov token binding in the header matches with the one in the key `pay` of the Approov token claims.
@@ -286,9 +286,8 @@ app.use('/v2/forms', handlesApproovTokenError)
 // Handles requests where the Approov token is a valid one.
 app.use('/v2/forms', handlesApproovTokenSuccess)
 
-// checks if the custom payload claim is present in the Approov token and
-// matches the claim used by the mobile app, that in this case we decided to be
-// the Authorization token, but you may want to use another type of claim.
+// Checks if the Approov token binding is valid and aborts the request when the environment variable
+// APPROOV_ABORT_REQUEST_ON_INVALID_TOKEN_BINDING is set to true in the environment file.
 app.use('/v2/forms', handlesApproovTokenBindingVerification)
 
 /// NOTE:

@@ -468,16 +468,14 @@ If we look into the shell view we can see that the first request have
 a valid token and in the second request the token is not valid because is
 expired, but once Approov is disabled the request is accepted.
 
-### Endpoints Protected by an Approov Token with Custom Payload Claim
+### Endpoints Protected with the Approov Token Binding
 
-A custom payload claim is optional in any Approov token and you can read
-more about them [here](./../README.md#approov-validation-process).
+The token binding is optional in any Approov token and you can read more about them [here](./../README.md#approov-validation-process).
 
-The requests where the custom payload claim is checked will be rejected on
-failure but only if the environment variable
-`APPROOV_ABORT_REQUEST_ON_INVALID_TOKEN_BINDING` is set to `true`. To
-bear in mind that before this check is done the request have already been
-through the same flow we have described for the `/v2/shapes` endpoint.
+The requests where the Approov token binding is checked will be rejected on failure, but
+only if the environment variable `APPROOV_ABORT_REQUEST_ON_INVALID_TOKEN_BINDING`
+is set to `true`. To bear in mind that before this check is done the request
+have already been through the same flow we have described for the `/v2/shapes` endpoint.
 
 
 #### /v2/forms - Invalid Approov Token Binding
