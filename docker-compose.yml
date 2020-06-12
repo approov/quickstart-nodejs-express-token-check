@@ -6,22 +6,18 @@ services:
     image: approov/node-express-shapes-demo
     build: ./docker
     restart: always
-    env_file: .env.example
-    environment:
-      - HTTP_PROTOCOL=https
-      - DEBUG=approov-protected-server
+    env_file: .env
     networks:
       - traefik
-      - default
     command: "npm start"
     volumes:
       - ./:/home/node/workspace
     labels:
       - "traefik.enable=true"
-      - "traefik.backend=approov-node-express-shapes-demo"
+      - "traefik.backend=${NODEJS_EXPRESS_SHAPES_DOMAIN? Missing value for: NODEJS_EXPRESS_SHAPES_DOMAIN}"
       - "traefik.docker.network=traefik"
-      - "traefik.port=5000"
-      - "traefik.frontend.rule=Host:node-express-shapes-demo.pdm.approov.io"
+      - "traefik.port=${HTTP_PORT? Missing value for: HTTP_PORT}"
+      - "traefik.frontend.rule=Host:${NODEJS_EXPRESS_SHAPES_DOMAIN}"
 
 networks:
   traefik:

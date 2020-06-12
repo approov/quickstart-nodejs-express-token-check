@@ -1,16 +1,19 @@
 # APPROOV INTEGRATION EXAMPLE
 
-To see how a server runs with an Approov integration please follow the
-[Approov Shapes API Server](./docs/approov-shapes-api-server.md) walk-through.
+An Approov token integration example for a NodeJS Express API as described in the article: [Approov Integration in a NodeJS Express API](https://blog.approov.io/approov-integration-in-a-nodejs-express-api).
+
+## HOW TO USE
+
+For your convenience we host ourselves the backend for this Approov integration walk-through, and the specific url for it can be found on the article, that we invite you to read in order to better understand the purpose and scope for this walk-through.
+
+If you prefer to have control of the backend please follow the [deployment](/docs/DEPLOYMENT.md) guide to deploy the backend to your own online server or just run it in localhost by following the [Approov Shapes API Server](./docs/approov-shapes-api-server.md) walk-through.
 
 The concrete implementation of the Approov Shapes API Server is in the
 [approov-protected-server.js](./server/approov-protected-server.js) file, that
 is a simple NodeJS Express server with some endpoints protected by Approov and
 other endpoints without any Approov protection.
 
-Now let's continue reading this README for a **quick start** introduction in how
-to integrate Approov on a current project by using as an example the code for
-the Approov Shapes API Server.
+Now let's continue reading this README for a **quick start** introduction in how to integrate Approov on a current project by using as an example the code for the Approov Shapes API Server.
 
 
 ## APPROOV VALIDATION PROCESS
