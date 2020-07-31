@@ -21,6 +21,6 @@
   "devDependencies": {
     "jsonwebtoken": "^8.4.0",
     "minimist": "^1.2.5",
-    "nodemon": "^1.18.9"
+    "nodemon": "^2.0.4"
   }
 }
