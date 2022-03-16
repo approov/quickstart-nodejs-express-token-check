@@ -230,9 +230,7 @@ const handlesApproovTokenBindingVerification = function(req, res, next){
   token_binding_payload = req.approovTokenDecoded.pay
 
   if (token_binding_payload === undefined) {
-    logApproov(req, res, "APPROOV TOKEN BINDING WARNING: key 'pay' is missing.")
-    logApproov(req, res, 'ACCEPTED REQUEST WITH APPROOV TOKEN BINDING MISSING')
-    next()
+    handlesRequestWithInvalidTokenBinding(req, res, next, 400, "APPROOV TOKEN BINDING ERROR: key 'pay' is missing in the claims of the Approov token payload.")
     return
   }
 

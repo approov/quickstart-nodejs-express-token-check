@@ -29,7 +29,7 @@ function Create_Docker_Container
         --rm \
         --user "${_user}" \
         --env-file .env \
-        --env "SERVER_NAME=server/${_server_name}.js" \
+        --env "SERVER_NAME=./${_server_name}.js" \
         --env "HTTP_PORT=${_port}" \
         --name "${_container_name}" \
         --publish "127.0.0.1:${_port}:${_port}" \

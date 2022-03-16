@@ -18,107 +18,71 @@ checking the Approov token and how the requested was handled.
 
 ## REQUIREMENTS
 
-* NodeJS.
+* Docker or NodeJS.
 * Postman - to simulate calls to the the API server.
 
-## INSTALL
+## SETUP
 
-### Approov Shapes Demo Server
+### Postman
 
-The demo is not in NPM, thus we need to clone it...
+To make the API request against the Shapes API server running on your machine you will need to use Postman and import [this collection](https://raw.githubusercontent.com/approov/postman-collections/master/quickstarts/shapes-api/shapes-api.postman_collection.json) that contains all the API endpoints prepared with all scenarios we want to demonstrate.
 
-```bash
-git clone https://github.com/approov/nodejs-express_shapes-api-server.git approov-demo && cd appoov-demo
-```
+### Clone the Repo
 
-### Development Environment
+To run the Shapes API server on localhost you will need to have the repos for this demo on your machine.
 
-In order to have an agnostic development environment through this tutorial we
-recommend the use of Docker, that can be installed by following [the official
-instructions](https://docs.docker.com/install/) for your platform, but feel free
-to use your own setup, provided it satisfies the [requirements](#requirements).
-
-A bash script `./stack` is provided in the root of the demo to make easy to use
-the docker stack to run this demo.
-
-Show the usage help with:
+Clone from Github with:
 
 ```bash
-$ ./stack
-
-./stack
-
-DOCKER STACK CLI WRAPPER
-
-This bash script is a wrapper around docker for easier use of the docker stack
-in this project.
-
-Signature:
-  ./stack [options] <command> <args>
-
-
-Usage:
-  ./stack
-  ./stack [-h | --help] [-p | --port] [-u | --user] <command> <args>
-
-
-Options:
-  -h | --help  Shows this help.
-  -p | --port  The host port to access the docker container.
-  -u | --user  Run the docker container under the given user name or uid.
-
-
-Commands/Args:
-  build                     Builds the docker image for this stack:
-                              ./stack build
-
-  approov-protected-server  Runs the approov server:
-                              ./stack approov-protected-server
-                              ./stack --port 5000 approov-protected-server
-
-  original-server           Runs the original server:
-                              ./stack original-server
-                              ./stack --port 5001 original-server
-
-  stop <server>             Stops the docker container for the given server:
-                              ./stack stop approov-protected-server
-
-  shell <name> <server>     Starts a shell in a new container:
-                              ./stack shell
-                              ./stack shell zsh
-                              ./stack --port 5001 shell zsh original-server
+git clone https://github.com/approov/quickstart-nodejs-express-token-check/.git
+cd quickstart-nodejs-express-token-check/servers/shapes-api
 ```
 
-#### Building the docker image:
+### The Environment File
+
+Lets' copy the `.env.example` to `.env` with the command:
+
+```bash
+cp .env.example .env
+```
+
+No modifications are necessary to the newly created `.env` in order to start running the demo.
+
+
+### Docker Stack
+
+In order to have an agnostic development environment through this tutorial we recommend the use of Docker, that can be installed by following [the official instructions](https://docs.docker.com/install/) for your platform, but feel free to use your own setup, provided it satisfies the [requirements](#requirements).
+
+A symlink `./stack` to the bash script `./bin/stack.bash` is provided in the root of the demo, at `/servers/shapes-api`, to make easy to use the docker stack to run this demo.
+
+Show the usage help by running from `/servers/shapes-api`:
+
+```bash
+./stack --help
+```
+
+#### Building the docker image
+
+From your machine terminal run:
 
 ```bash
 ./stack build
 ```
 > The image will contain the Shapes Demo Server in NodeJS.
 
-#### Getting a bash shell inside the docker container:
+#### Getting a bash shell inside the docker container
+
+Unless you choose to not follow this demo with the provided docker stack you need to get a shell inside the docker container in order to run all the subsequent shell commands that you will be instructed to execute during the demo.
+
+From your machine terminal execute:
 
 ```bash
 ./stack shell
 ```
-> If you choose to continue following this demo using Docker, then all subsequent
-  commands must be executed from this shell.
 
-## SETUP
+#### Installing dependencies
 
-### Environment File
-
-Lets' copy the `.env.example` to `.env` with the command:
-
-```bash
-cp .env-example .env
-```
-
-No modifications are necessary to the newly created `.env` in order to run the
-demo with the provided Postman collection.
-
-
-### Installing dependencies
+From the docker container shell execute:
 
 ```bash
 npm install
@@ -155,71 +119,14 @@ approov-protected-server 200 GET /v2/forms APPROOV TOKEN BINDING ERROR: token bi
 approov-protected-server 401 GET /v2/forms REJECTED REQUEST WITH INVALID APPROOV TOKEN BINDING +0ms
 ```
 
-### Starting Postman
-
-Open Postman and import [this collection](https://gitlab.com/snippets/1879670/raw)
-that contains all the API endpoints prepared with all scenarios we want to
-demonstrate.
-
-### Approov Tokens Generation
-
-The Approov tokens used in the Postman collection where generated by the [Approov CLI Tool](https://approov.io/docs/v2.0/approov-cli-tool-reference/), that can be downloaded from [here](https://approov.io/downloads/approovcli.zip), and the [management tokens](https://approov.io/docs/v2.0/approov-usage-documentation/#management-tokens) to operate the tool need to be obtained by requesting a [Shapes Hands on Demo](https://info.approov.io/demo).
-
-Follow the [Approov installation](https://approov.io/docs/v2.0/approov-installation/) steps to get the Approov CLI tool working on your computer, and after you will be able to generate your own Approov tokens.
-
-First of all lets set the environment variable to the Approov CLI tool management token:
-
-```bash
-export APPROOV_MANAGEMENT_TOKEN=$(cat ~/path/to/approov/management/token/development.tok)
-```
-
-To show the usage help for creating Approov Tokens:
-
-```bash
-$ approov token
-  -check value
-      check the validity of an Approov token or loggable token
-  -genExample value
-      generates an example Approov token for the given API domain with a 1 hour expiry time
-  -genLongLived value
-      generates a long lived Approov token with <issuer>,<duration (e.g 1y, 30d)>
-  -setDataHashInToken value
-      sets data to be hashed for an example Approov token
-  -type value
-      sets the type of an example Approov token of valid, invalid or failover
-New approov CLI tools are available from https://approov.io/downloads/approovcli.zip
-```
-
-With default 1 hour expire time and without the `-setDataHashInToken` for the token binding:
-
-```bash
-$ approov token -genExample shapes.approov.io
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1NjM4OTQ4NDEsImlwIjoiMS4yLjMuNCIsImRpZCI6IkV4YW1wbGVBcHByb292VG9rZW5ESUQ9PSJ9.qfTKxvZOd0QRhq1JQfIerlHzSIFj3R1VfNtwcKTOp4U
-```
-
-With setting the token biding, for example, by using the `Authorization` header as the value for `-setDataHashInToken`:
-
-```bash
-$ approov token -genExample shapes.approov.io -setDataHashInToken Like-The-Authorization-Header-Value
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1NjM4OTYzOTMsImlwIjoiMS4yLjMuNCIsImRpZCI6IkV4YW1wbGVBcHByb292VG9rZW5ESUQ9PSIsInBheSI6IllVK01YZEM4V3NpaTd6NmdCVnhPamhVU21rTGE2RytpK3FMNjBIYi8zdUU9In0.FuwDA12780bUvWKMr1P357CBCWVf-KukLQyu1O5E2yA
-```
-
-Feel free to try all the options...
-
-
 ### Starting the NodeJS Express server
 
-Before we start the server we will want to setup the debug level to be used across all restarts:
+Before we start the server we will want to setup the debug level to be used across all restarts.
 
-```
+From the docker container shell run:
+
+```bash
 export DEBUG=approov-protected-server
-```
-
-Confirming that is properly set:
-
-```
-$ echo $DEBUG
-approov-protected-server
 ```
 
 To start the server we want to issue the command:
@@ -253,8 +160,6 @@ Looking into the Postman view, we can see that the request was sent without the
 `Approov-Token` header and we got a `200` response that matches the one in the
 logs output from the shell view.
 
-
-### Endpoints Protected by an Approov Token
 
 ### Endpoints Protected by an Approov Token
 
