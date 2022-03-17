@@ -4,7 +4,7 @@
 
 This repo implements the Approov server-side request verification code with the NodeJS Express framework in a simple Hello API server, which performs the verification check before allowing valid traffic to be processed by the API endpoint.
 
-Originally this repo was just to show the Approov token integration example on a NodeJS Express API as described in the article: [Approov Integration in a NodeJS Express API](https://blog.approov.io/approov-integration-in-a-nodehs-express-api), that you can still find at [/servers/shapes-api](/servers/shapes-api).
+Originally this repo was just to show the Approov token integration example on a NodeJS Express API as described in the article: [Approov Integration in a NodeJS Express API](https://blog.approov.io/approov-integration-in-a-nodejs-express-api), that you can still find at [/servers/shapes-api](/servers/shapes-api).
 
 
 ## TOC - Table of Contents
