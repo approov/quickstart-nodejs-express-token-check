@@ -1,0 +1,43 @@
+version: "2.3"
+
+services:
+
+  unprotected-server:
+    image: approov/nodejs-express:17.7.1
+    build: ./
+    environment:
+      - DEBUG=hello-server
+    networks:
+      - default
+    command: sh -c "npm install && npm start"
+    ports:
+      - ${HOST_IP:-127.0.0.1}:${HTTP_PORT:-8002}:${HTTP_PORT:-8002}
+    volumes:
+      - ./src/unprotected-server:/home/node/workspace
+
+  approov-token-check:
+    image: approov/nodejs-express:17.7.1
+    build: ./
+    environment:
+      - DEBUG=hello-server
+    networks:
+      - default
+    command: sh -c "npm install && npm start"
+    ports:
+      - ${HOST_IP:-127.0.0.1}:${HTTP_PORT:-8002}:${HTTP_PORT:-8002}
+    volumes:
+      - ./src/approov-protected-server/token-check:/home/node/workspace
+
+  approov-token-binding-check:
+    image: approov/nodejs-express:17.7.1
+    build: ./
+    environment:
+      - DEBUG=hello-server
+    networks:
+      - default
+    command: sh -c "npm install && npm start"
+    ports:
+      - ${HOST_IP:-127.0.0.1}:${HTTP_PORT:-8002}:${HTTP_PORT:-8002}
+    volumes:
+      - ./src/approov-protected-server/token-binding-check:/home/node/workspace
+
