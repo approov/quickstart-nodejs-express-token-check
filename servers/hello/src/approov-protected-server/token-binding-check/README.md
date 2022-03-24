@@ -45,7 +45,7 @@ From `/servers/hello/src/approov-protected-server/token-check` execute the follo
 cp .env.example .env
 ```
 
-Edit each file and add the [dummy secret](/README.md#the-dummy-secret) to it in order to be able to test the Approov integration with the provided [Postman collection](https://github.com/approov/postman-collections/blob/master/quickstarts/hello-world/hello-world.postman_curl_requests_examples.md).
+Edit the `.env` file and add the [dummy secret](/README.md#the-dummy-secret) to it in order to be able to test the Approov integration with the provided [Postman collection](https://github.com/approov/postman-collections/blob/master/quickstarts/hello-world/hello-world.postman_curl_requests_examples.md).
 
 [TOC](#toc---table-of-contents)
 
