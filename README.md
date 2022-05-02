@@ -7,103 +7,110 @@ This repo implements the Approov server-side request verification code with the 
 Originally this repo was just to show the Approov token integration example on a NodeJS Express API as described in the article: [Approov Integration in a NodeJS Express API](https://blog.approov.io/approov-integration-in-a-nodejs-express-api), that you can still find at [/servers/shapes-api](/servers/shapes-api).
 
 
-## TOC - Table of Contents
+## Approov Integration Quickstart
 
-* [Why?](#why)
-* [How it Works?](#how-it-works)
-* [Quickstarts](#approov-integration-quickstarts)
-* [Examples](#approov-integration-examples)
-* [Useful Links](#useful-links)
+The quickstart was tested with the following Operating Systems:
 
+* Ubuntu 20.04
+* MacOS Big Sur
+* Windows 10 WSL2 - Ubuntu 20.04
 
-## Why?
+First, setup the [Appoov CLI](https://approov.io/docs/latest/approov-installation/index.html#initializing-the-approov-cli).
 
-You can learn more about Approov, the motives for adopting it, and more detail on how it works by following this [link](https://approov.io/product). In brief, Approov:
+Now, register the API domain for which Approov will issues tokens:
 
-* Ensures that accesses to your API come from official versions of your apps; it blocks accesses from republished, modified, or tampered versions
-* Protects the sensitive data behind your API; it prevents direct API abuse from bots or scripts scraping data and other malicious activity
-* Secures the communication channel between your app and your API with [Approov Dynamic Certificate Pinning](https://approov.io/docs/latest/approov-usage-documentation/#approov-dynamic-pinning). This has all the benefits of traditional pinning but without the drawbacks
-* Removes the need for an API key in the mobile app
-* Provides DoS protection against targeted attacks that aim to exhaust the API server resources to prevent real users from reaching the service or to at least degrade the user experience.
+```bash
+approov api -add api.example.com
+```
+
+Next, enable your Approov `admin` role with:
+
+```bash
+eval `approov role admin`
+```
+
+Now, get your Approov Secret with the [Appoov CLI](https://approov.io/docs/latest/approov-installation/index.html#initializing-the-approov-cli):
+
+```bash
+approov secret -get base64
+```
+
+Next, add the [Approov secret](https://approov.io/docs/latest/approov-usage-documentation/#account-secret-key-export) to your project `.env` file:
+
+```env
+APPROOV_BASE64_SECRET=approov_base64_secret_here
+```
+
+Now, add to your `package.json` file the [JWT dependency](https://github.com/auth0/express-jwt):
+
+```json
+"express-jwt": "^6.0.0"
+```
+
+Next, in your code require the JWT package:
+
+```javascript
+const jwt = require('express-jwt')
+```
+
+Now, grab the Approov secret and set it into a constant:
+
+```javascript
+const dotenv = require('dotenv').config()
+const approovBase64Secret = dotenv.parsed.APPROOV_BASE64_SECRET;
+const approovSecret = Buffer.from(approovBase64Secret, 'base64')
+```
+
+Next, verify the Approov token:
+
+```javascript
+// Callback that performs the Approov token check using the express-jwt library
+const verifyApproovToken = jwt({
+  secret: APPROOV_SECRET,
+  requestProperty: 'approovTokenDecoded',
+  getToken: function fromApproovTokenHeader(req, res) {
+    return req.get('Approov-Token')
+  },
+  algorithms: ['HS256']
+})
+```
+
+Now, handle errors when verifying Approov tokens:
+
+```js
+// Callback to handle the errors occurred while checking the Approov token.
+const approovTokenErrorHandler = (err, req, res, next) => {
+  // When has an error, it means the header `Approov-Token` is empty, missing or
+  // have failed validation of signature, expire time or is malformed.
+  if (err.name === 'UnauthorizedError') {
+    res.status(401)
+    res.json({})
+    return
+  }
+
+  next()
+}
+```
+
+Next, set the callbacks as a request middleware:
+
+```js
+const api = express()
+
+// Middleware to handle the validation of the Approov token for all your API
+// endpoints.
+api.use(verifyApproovToken)
+api.use(approovTokenErrorHandler)
+````
+
+Not enough details in the bare bones quickstart? No worries, check the [detailed quickstarts](QUICKSTARTS.md) that contain a more comprehensive set of instructions, including how to test the Approov integration.
 
 [TOC](#toc---table-of-contents)
 
 
-## How it works?
+## Issues
 
-This is a brief overview of how the Approov cloud service and the NodeJS Express API server fit together from a backend perspective. For a complete overview of how the mobile app and backend fit together with the Approov cloud service and the Approov SDK we recommend to read the [Approov overview](https://approov.io/product) page on our website.
-
-### Approov Cloud Service
-
-The Approov cloud service attests that a device is running a legitimate and tamper-free version of your mobile app.
-
-* If the integrity check passes then a valid token is returned to the mobile app
-* If the integrity check fails then a legitimate looking token will be returned
-
-In either case, the app, unaware of the token's validity, adds it to every request it makes to the Approov protected API(s).
-
-### NodeJS Backend Server
-
-The NodeJS Express API backend server ensures that the token supplied in the `Approov-Token` header is present and valid. The validation is done by using a shared secret known only to the Approov cloud service and the NodeJS backend server.
-
-The request is handled such that:
-
-* If the Approov Token is valid, the request is allowed to be processed by the API endpoint
-* If the Approov Token is invalid, an HTTP 401 Unauthorized response is returned
-
-You can choose to log JWT verification failures, but we left it out on purpose so that you can have the choice of how you prefer to do it and decide the right amount of information you want to log.
-
->#### System Clock
->
->In order to correctly check for the expiration times of the Approov tokens is very important that the NodeJS backend server is synchronizing automatically the system clock over the network with an authoritative time source. In Linux this is usual done with a NTP server.
-
-[TOC](#toc---table-of-contents)
-
-
-## Approov Integration Quickstarts
-
-The quickstart code for the Approov NodeJS server is split into two implementations. The first gets you up and running with basic token checking. The second uses a more advanced Approov feature, _token binding_. Token binding may be used to link the Approov token with other properties of the request, such as user authentication (more details can be found [here](https://approov.io/docs/latest/approov-usage-documentation/#token-binding)).
-* [Approov token check quickstart](/docs/APPROOV_TOKEN_QUICKSTART.md)
-* [Approov token check with token binding quickstart](/docs/APPROOV_TOKEN_BINDING_QUICKSTART.md)
-
-Both the quickstarts are built from the unprotected example server defined [here](/servers/hello/src/unprotected-server/hello-server-unprotected.js), thus you can use Git to see the code differences between them.
-
-Code difference between the Approov token check quickstart and the original unprotected server:
-
-```
-git diff --no-index ./servers/hello/src/unprotected-server/hello-server-unprotected.js ./servers/hello/src/approov-protected-server/token-check/hello-server-protected.js
-```
-
-You can do the same for the Approov token binding quickstart:
-
-```
-git diff --no-index ./servers/hello/src/unprotected-server/hello-server-unprotected.js ./servers/hello/src/approov-protected-server/token-binding-check/hello-server-protected.js
-```
-
-Or you can compare the code difference between the two quickstarts:
-
-```
-git diff --no-index ./servers/hello/src/approov-protected-server/token-check/hello-server-protected.js ./servers/hello/src/approov-protected-server/token-binding-check/hello-server-protected.js
-```
-
-[TOC](#toc---table-of-contents)
-
-
-## Approov Integration Examples
-
-The code examples for the Approov quickstarts are extracted from this simple [Approov integration examples](/servers/hello/src/approov-protected-server), that you can run from your computer to play around with the Approov integration and gain a better understanding of how simple and easy it is to integrate Approov in a NodeJS API server.
-
-### Testing with Postman
-
-A ready-to-use Postman collection can be found [here](https://raw.githubusercontent.com/approov/postman-collections/master/quickstarts/hello-world/hello-world.postman_collection.json). It contains a comprehensive set of example requests to send to the NodeJS server for testing. The collection contains requests with valid and invalid Approov tokens, and with and without token binding.
-
-### Testing with Curl
-
-An alternative to the Postman collection is to use cURL to make the API requests. Check some examples [here](https://github.com/approov/postman-collections/blob/master/quickstarts/hello-world/hello-world.postman_curl_requests_examples.md).
-
-### The Dummy Secret
-
-The valid Approov tokens in the Postman collection and cURL requests examples were signed with a dummy secret that was generated with `openssl rand -base64 64 | tr -d '\n'; echo`, therefore not a production secret retrieved with `approov secret -get base64`, thus in order to use it you need to set the `APPROOV_BASE64_SECRET`, in the `.env` file for each [Approov integration example](/servers/hello/src/approov-protected-server), to the following value: `h+CX0tOzdAAR9l15bWAqvq7w9olk66daIH+Xk+IAHhVVHszjDzeGobzNnqyRze3lw/WVyWrc2gZfh3XXfBOmww==`.
+If you find any issue while following our instructions then just report it [here](https://github.com/approov/quickstart-nodejs-express-token-check/issues), with the steps to reproduce it, and we will sort it out and/or guide you to the correct path.
 
 [TOC](#toc---table-of-contents)
 
@@ -113,15 +120,14 @@ The valid Approov tokens in the Postman collection and cURL requests examples we
 If you wish to explore the Approov solution in more depth, then why not try one of the following links as a jumping off point:
 
 * [Approov Free Trial](https://approov.io/signup)(no credit card needed)
+* [Approov Get Started](https://approov.io/product/demo)
 * [Approov QuickStarts](https://approov.io/docs/latest/approov-integration-examples/)
-* [Approov Live Demo](https://approov.io/product/demo)
 * [Approov Docs](https://approov.io/docs)
-* [Approov Blog](https://blog.approov.io)
+* [Approov Blog](https://approov.io/blog/)
 * [Approov Resources](https://approov.io/resource/)
 * [Approov Customer Stories](https://approov.io/customer)
 * [Approov Support](https://approov.zendesk.com/hc/en-gb/requests/new)
 * [About Us](https://approov.io/company)
 * [Contact Us](https://approov.io/contact)
-
 
 [TOC](#toc---table-of-contents)
