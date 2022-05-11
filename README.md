@@ -105,14 +105,18 @@ api.use(approovTokenErrorHandler)
 
 Not enough details in the bare bones quickstart? No worries, check the [detailed quickstarts](QUICKSTARTS.md) that contain a more comprehensive set of instructions, including how to test the Approov integration.
 
-[TOC](#toc---table-of-contents)
+
+## More Information
+
+* [Approov Overview](OVERVIEW.md)
+* [Detailed Quickstarts](QUICKSTARTS.md)
+* [Examples](EXAMPLES.md)
+* [Testing](TESTING.md)
 
 
 ## Issues
 
 If you find any issue while following our instructions then just report it [here](https://github.com/approov/quickstart-nodejs-express-token-check/issues), with the steps to reproduce it, and we will sort it out and/or guide you to the correct path.
-
-[TOC](#toc---table-of-contents)
 
 
 ## Useful Links
@@ -129,5 +133,3 @@ If you wish to explore the Approov solution in more depth, then why not try one 
 * [Approov Support](https://approov.zendesk.com/hc/en-gb/requests/new)
 * [About Us](https://approov.io/company)
 * [Contact Us](https://approov.io/contact)
-
-[TOC](#toc---table-of-contents)
