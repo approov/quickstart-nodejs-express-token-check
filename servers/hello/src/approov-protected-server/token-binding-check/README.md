@@ -14,7 +14,7 @@ This Approov integration example is from where the code example for the [Approov
 
 ## Why?
 
-To lock down your API server to your mobile app. Please read the brief summary in the [README](/README.md#why) at the root of this repo or visit our [website](https://approov.io/product.html) for more details.
+To lock down your API server to your mobile app. Please read the brief summary in the [Approov Overview](/OVERVIEW.md#why) at the root of this repo or visit our [website](https://approov.io/product) for more details.
 
 [TOC](#toc---table-of-contents)
 
@@ -23,7 +23,7 @@ To lock down your API server to your mobile app. Please read the brief summary i
 
 The NodeJS Express API server is very simple and is defined in the file [src/approov-protected-server/token-binding-check/hello_server_protected.js](/servers/hello/src/approov-protected-server/token-binding-check/hello_server_protected.js). Take a look at the `verifyApproovToken()` and `verifyApproovTokenBinding()` functions to see the simple code for the checks.
 
-For more background on Approov, see the overview in the [README](/README.md#how-it-works) at the root of this repo.
+For more background on Approov, see the [Approov Overview](/OVERVIEW.md#how-it-works) at the root of this repo.
 
 [TOC](#toc---table-of-contents)
 
@@ -45,14 +45,14 @@ From `/servers/hello/src/approov-protected-server/token-check` execute the follo
 cp .env.example .env
 ```
 
-Edit the `.env` file and add the [dummy secret](/README.md#the-dummy-secret) to it in order to be able to test the Approov integration with the provided [Postman collection](https://github.com/approov/postman-collections/blob/master/quickstarts/hello-world/hello-world.postman_curl_requests_examples.md).
+Edit the `.env` file and add the [dummy secret](/TESTING.md#the-dummy-secret) to it in order to be able to test the Approov integration with the provided [Postman collection](https://github.com/approov/postman-collections/blob/master/quickstarts/hello-world/hello-world.postman_curl_requests_examples.md).
 
 [TOC](#toc---table-of-contents)
 
 
 ## Try the Approov Integration Example
 
-First, you need to set the dummy secret in the `/servers/hello/src/approov-protected-server/token-binding-check/.env` file as explained [here](/README.md#the-dummy-secret).
+First, you need to set the dummy secret in the `/servers/hello/src/approov-protected-server/token-binding-check/.env` file as explained [here](/TESTING.md#the-dummy-secret).
 
 Second, you need to install the dependencies. From the `/servers/hello/src/approov-protected-server/token-check` folder execute:
 
@@ -90,7 +90,7 @@ Keep-Alive: timeout=5
 
 The reason you got a `401` is because no Approoov token isn't provided in the headers of the request.
 
-Finally, you can test that the Approov integration example works as expected with this [Postman collection](/README.md#testing-with-postman) or with some cURL requests [examples](/README.md#testing-with-curl).
+Finally, you can test that the Approov integration example works as expected with this [Postman collection](/TESTING.md#testing-with-postman) or with some cURL requests [examples](/TESTING.md#testing-with-curl).
 
 [TOC](#toc---table-of-contents)
 

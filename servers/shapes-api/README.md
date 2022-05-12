@@ -1,6 +1,6 @@
 # APPROOV INTEGRATION EXAMPLE
 
-An Approov token integration example for a NodeJS Express API as described in the article: [Approov Integration in a NodeJS Express API](https://blog.approov.io/approov-integration-in-a-nodejs-express-api).
+An Approov token integration example for a NodeJS Express API as described in the article: [Approov Integration in a NodeJS Express API](https://approov.io/blog//approov-integration-in-a-nodejs-express-api).
 
 ## HOW TO USE
 

@@ -14,14 +14,14 @@ This quickstart is for developers familiar with NodeJS who are looking for a qui
 
 ## Why?
 
-To lock down your API server to your mobile app. Please read the brief summary in the [README](/README.md#why) at the root of this repo or visit our [website](https://approov.io/product.html) for more details.
+To lock down your API server to your mobile app. Please read the brief summary in the [Approov Overview](/OVERVIEW.md#why) at the root of this repo or visit our [website](https://approov.io/product) for more details.
 
 [TOC](#toc---table-of-contents)
 
 
 ## How it works?
 
-For more background, see the overview in the [README](/README.md#how-it-works) at the root of this repository.
+For more background, see the [Approov Overview](/OVERVIEW.md#how-it-works) at the root of this repository.
 
 The main functionality for the Approov token binding check is in the file [/servers/hello/src/approov-protected-server/token-binding-check/hello_server_protected.js](/servers/hello/src/approov-protected-server/token-binding-check/hello_server_protected.js). Take a look at the `_verifyApproovToken()` and `_erifyApproovTokenBinding()` functions to see the simple code for the checks.
 
