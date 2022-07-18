@@ -363,7 +363,7 @@ npm start
 
 **Request Overview:**
 
-We repeated the process to generate the Appoov token with 1 minute of expiration
+We repeated the process to generate the Approov token with 1 minute of expiration
 time.
 
 Once more we performed the 2 requests with the same token and with 2 minutes
