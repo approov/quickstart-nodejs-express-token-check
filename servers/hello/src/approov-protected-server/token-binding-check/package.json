@@ -18,7 +18,7 @@
     "fs": "0.0.1-security"
   },
   "devDependencies": {
-    "jsonwebtoken": "^8.4.0",
+    "jsonwebtoken": "^9.0.0",
     "minimist": "^1.2.6",
     "nodemon": "^2.0.4"
   }
