@@ -1,6 +1,6 @@
 const debug = require('debug')('hello-server')
 const dotenv = require('dotenv').config()
-const jwt = require('express-jwt')
+const { expressjwt: jwt } = require('express-jwt')
 const express = require('express')
 const cors = require('cors')
 const api = express()

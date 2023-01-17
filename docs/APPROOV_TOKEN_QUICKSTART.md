@@ -116,7 +116,7 @@ api.use(cors())
 //////////////////
 
 const dotenv = require('dotenv').config()
-const jwt = require('express-jwt')
+const { expressjwt: jwt } = require('express-jwt')
 
 
 ///////////////////

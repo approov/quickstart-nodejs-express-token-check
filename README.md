@@ -56,13 +56,13 @@ APPROOV_BASE64_SECRET=approov_base64_secret_here
 Now, add to your `package.json` file the [JWT dependency](https://github.com/auth0/express-jwt):
 
 ```json
-"express-jwt": "^6.0.0"
+"express-jwt": "^8.3.0"
 ```
 
 Next, in your code require the JWT package:
 
 ```javascript
-const jwt = require('express-jwt')
+const { expressjwt: jwt } = require('express-jwt')
 ```
 
 Now, grab the Approov secret and set it into a constant:
