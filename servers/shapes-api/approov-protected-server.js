@@ -1,5 +1,5 @@
 const debug = require('debug')('approov-protected-server')
-const jwt = require('express-jwt')
+const { expressjwt: jwt } = require('express-jwt')
 const crypto = require('crypto')
 const config = require('./configuration')
 const https = require('https')

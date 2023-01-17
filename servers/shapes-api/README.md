@@ -58,10 +58,7 @@ The token binding in an Approov token is the one in the `pay` key:
 "pay":"f3U2fniBJVE04Tdecj0d6orV9qT9t52TjfHxdUqDBgY="
 ```
 
-**ALERT**:
-
-Please bear in mind that the token binding is not meant to pass application data
-to the API server.
+> **ALERT**: Please bear in mind that the token binding is not meant to pass application data to the API server.
 
 ## SYSTEM CLOCK
 
@@ -157,7 +154,7 @@ require('dotenv').config()
 ```js
 // file: approov-protected-server.js
 
-const jwt = require('express-jwt')
+const { expressjwt: jwt } = require('express-jwt')
 const crypto = require('crypto')
 ```
 
