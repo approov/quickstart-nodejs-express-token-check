@@ -21,9 +21,12 @@ services:
     build: .
     restart: always
     env_file: .env
+    ports:
+      # Expose locally for testing
+      - 127.0.0.1:8001:${HTTP_PORT:-8002}
     networks:
       - traefik
-    command: "npm start"
+    command: sh -c "npm install && npm start"
     volumes:
       - ./:/home/node/workspace
     labels:
