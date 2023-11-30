@@ -43,16 +43,10 @@ APPROOV_BASE64_SECRET=approov-base64-encoded-secret-here
 sudo docker-compose build
 ```
 
-### Install the NodeJS dependencies
-
-``` bash
-sudo docker-compose run --rm node bash -c 'npm install'
-```
-
 ### Bring the API up
 
 ```bash
-sudo docker-compose up -d
+sudo docker-compose up -d node
 ```
 
 ### Bring the API down

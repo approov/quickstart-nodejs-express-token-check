@@ -2,22 +2,39 @@ version: "2.1"
 
 services:
 
+  dev:
+    image: ${DOCKER_IMAGE:-approov/quickstart-nodejs-express-token-check:dev}
+    build: .
+    env_file:
+      - .env
+    working_dir: "/home/node/workspace"
+    command: "npm start"
+    volumes:
+      - ./:/home/node/workspace
+    ports:
+      - 127.0.0.1:${HTTP_PORT:-8002}:${HTTP_PORT:-8002}
+    networks:
+      - default
+
   node:
-    image: approov/node-express-shapes-demo
-    build: ./docker
+    image: ${DOCKER_IMAGE:-approov/quickstart-nodejs-express-token-check}
+    build: .
     restart: always
     env_file: .env
+    ports:
+      # Expose locally for testing
+      - 127.0.0.1:8001:${HTTP_PORT:-8002}
     networks:
       - traefik
-    command: "npm start"
+    command: sh -c "npm install && npm start"
     volumes:
       - ./:/home/node/workspace
     labels:
       - "traefik.enable=true"
-      - "traefik.backend=${NODEJS_EXPRESS_SHAPES_DOMAIN? Missing value for: NODEJS_EXPRESS_SHAPES_DOMAIN}"
+      - "traefik.backend=${SHAPES_NODEJS_EXPRESS_DOMAIN? Missing value for: SHAPES_NODEJS_EXPRESS_DOMAIN}"
       - "traefik.docker.network=traefik"
       - "traefik.port=${HTTP_PORT? Missing value for: HTTP_PORT}"
-      - "traefik.frontend.rule=Host:${NODEJS_EXPRESS_SHAPES_DOMAIN}"
+      - "traefik.frontend.rule=Host:${SHAPES_NODEJS_EXPRESS_DOMAIN}"
 
 networks:
   traefik:

@@ -1,5 +1,4 @@
-ARG TAG=17.7.1-slim
-
+ARG TAG=18-slim
 FROM node:${TAG}
 
 ARG CONTAINER_USER="node"
@@ -31,8 +30,7 @@ RUN apt update && apt -y upgrade && \
         cp -rv /root/.oh-my-zsh /home/"${CONTAINER_USER}"/.oh-my-zsh && \
         sed -i "s/\/root/\/home\/${CONTAINER_USER}/g" /home/"${CONTAINER_USER}"/.zshrc && \
         sed -i s/ZSH_THEME=\"robbyrussell\"/ZSH_THEME=\"${OH_MY_ZSH_THEME}\"/g /home/${CONTAINER_USER}/.zshrc && \
-        mkdir /home/"${CONTAINER_USER}"/workspace && \
-        chown -R "${CONTAINER_USER}":"${CONTAINER_USER}" /home/"${CONTAINER_USER}"
+        npm install -g nodemon
 
 USER ${CONTAINER_USER}
 
@@ -42,6 +40,15 @@ ENV LANGUAGE "${LOCALE_STRING}:${LANGUAGE_CODE}"
 ENV PATH=/home/${CONTAINER_USER}/.local/bin:${PATH}
 ENV LC_ALL "${LOCALIZATION}"
 
+RUN mkdir -p /home/${CONTAINER_USER}/workspace
+
 WORKDIR /home/${CONTAINER_USER}/workspace
+
+# Copy app source into the docker image with the correct ownership
+COPY --chown=${CONTAINER_USER}:${CONTAINER_USER} approov-protected-server.js .
+COPY --chown=${CONTAINER_USER}:${CONTAINER_USER} package.json .
+COPY --chown=${CONTAINER_USER}:${CONTAINER_USER} package-lock.json .
+
+RUN pwd && ls -laR && npm install
 
 CMD ["zsh"]
