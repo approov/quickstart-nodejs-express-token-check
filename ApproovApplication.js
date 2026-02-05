@@ -14,7 +14,8 @@ if (envResult.error && envResult.error.code !== 'ENOENT') {
 const PORT = parsePort(process.env.PORT, 8080);
 const APPROOV_HEADER = 'Approov-Token';
 const AUTH_HEADER = 'Authorization';
-const DIGEST_HEADER = 'Content-Digest';
+const SESSION_ID_HEADER = 'SessionId';
+const REQUIRED_SECRET_PLACEHOLDER = 'approov_base64url_secret_here';
 const APPROOV_SECRET = loadApproovSecret();
 
 let approovEnabled = true;
@@ -27,10 +28,20 @@ const PROTECTED_PATHS = new Set([
   '/token-double-binding',
 ]);
 
+const APPROOV_ERROR_CODES = {
+  MISSING_TOKEN: 'missing_approov_token',
+  TOKEN_VERIFICATION_FAILED: 'token_verification_failed',
+  TOKEN_MISSING_EXPIRATION: 'token_missing_expiration',
+  TOKEN_EXPIRED: 'token_expired',
+  MISSING_BINDING_HEADER: 'missing_binding_header',
+  BINDING_MISMATCH: 'binding_mismatch',
+};
+
 const app = express();
 app.disable('x-powered-by');
 app.use(cors());
 
+app.use(requestLoggingMiddleware);
 app.use(approovAuthMiddleware);
 
 app.get('/', (req, res) => {
@@ -78,10 +89,10 @@ app.get('/token-binding', (req, res) => {
 
 app.get('/token-double-binding', (req, res) => {
   const authorization = req.get(AUTH_HEADER);
-  const contentDigest = req.get(DIGEST_HEADER);
+  const sessionId = req.get(SESSION_ID_HEADER);
   const payload = infoPayload("Protected endpoint '/token-double-binding'; dual token binding enforced.");
   payload.authorizationHeaderPresent = hasText(authorization);
-  payload.contentDigestHeaderPresent = hasText(contentDigest);
+  payload.sessionIdHeaderPresent = hasText(sessionId);
   res.json(payload);
 });
 
@@ -104,10 +115,15 @@ function approovAuthMiddleware(req, res, next) {
   }
 
   if (!PROTECTED_PATHS.has(req.path)) {
+    req.approovSummary = 'approov_not_required';
+    req.approovRequiredHeaders = [];
     return next();
   }
 
+  req.approovRequiredHeaders = requiredHeadersFor(req.path, approovEnabled, tokenBindingEnabled);
+
   if (!approovEnabled) {
+    req.approovSummary = 'approov_disabled';
     return next();
   }
 
@@ -115,16 +131,29 @@ function approovAuthMiddleware(req, res, next) {
     const rawToken = trimOrNull(req.get(APPROOV_HEADER));
     const claims = verifyApproovToken(rawToken);
 
-    if (tokenBindingEnabled && needsBindingCheck(req.path)) {
-      const bindingValue = extractBindingValue(req.path, req);
-      if (!hasText(bindingValue)) {
-        throw new ApproovAuthError('Missing binding header value.');
+    if (tokenBindingEnabled) {
+      const bindingHeaders = bindingHeadersFor(req.path);
+      if (bindingHeaders.length > 0) {
+        const bindingValue = extractBindingValue(req, bindingHeaders);
+        if (!hasText(bindingValue)) {
+          throw new ApproovAuthError(
+            APPROOV_ERROR_CODES.MISSING_BINDING_HEADER,
+            'Missing binding header value.'
+          );
+        }
+        if (!isBindingValid(bindingValue, claims)) {
+          throw new ApproovAuthError(
+            APPROOV_ERROR_CODES.BINDING_MISMATCH,
+            'Approov token binding mismatch.'
+          );
+        }
       }
-      verifyTokenBinding(bindingValue, claims);
     }
 
+    req.approovSummary = 'approov_ok';
     return next();
   } catch (err) {
+    setApproovFailureSummary(req, err);
     logAuthFailure(err);
     return unauthorized(res);
   }
@@ -133,7 +162,7 @@ function approovAuthMiddleware(req, res, next) {
 // Token validation logic: signature check, expiration, and binding (when enabled).
 function verifyApproovToken(token) {
   if (!hasText(token)) {
-    throw new ApproovAuthError('Approov token missing.');
+    throw new ApproovAuthError(APPROOV_ERROR_CODES.MISSING_TOKEN, 'Approov token missing.');
   }
 
   let claims;
@@ -143,47 +172,77 @@ function verifyApproovToken(token) {
       ignoreExpiration: true,
     });
   } catch (err) {
-    throw new ApproovAuthError('Approov token verification failed.');
+    throw new ApproovAuthError(
+      APPROOV_ERROR_CODES.TOKEN_VERIFICATION_FAILED,
+      'Approov token verification failed.'
+    );
   }
 
   const exp = Number(claims.exp);
   if (!Number.isFinite(exp)) {
-    throw new ApproovAuthError('Approov token missing expiration.');
+    throw new ApproovAuthError(
+      APPROOV_ERROR_CODES.TOKEN_MISSING_EXPIRATION,
+      'Approov token missing expiration.'
+    );
   }
   if (exp * 1000 <= Date.now()) {
-    throw new ApproovAuthError('Approov token expired.');
+    throw new ApproovAuthError(APPROOV_ERROR_CODES.TOKEN_EXPIRED, 'Approov token expired.');
   }
 
   return claims;
 }
 
-function verifyTokenBinding(bindingValue, claims) {
+function isBindingValid(bindingValue, claims) {
   const expected = typeof claims.pay === 'string' ? claims.pay.trim() : '';
   if (!hasText(expected)) {
-    throw new ApproovAuthError('Approov token missing binding payload.');
+    return false;
   }
 
   const computed = hashBase64(bindingValue);
-  if (computed !== expected) {
-    throw new ApproovAuthError('Approov token binding mismatch.');
-  }
+  return timingSafeEquals(expected, computed);
 }
 
-function extractBindingValue(path, req) {
-  if (path === '/token-binding') {
-    return trimOrNull(req.get(AUTH_HEADER));
-  }
-
-  const authorization = trimOrNull(req.get(AUTH_HEADER));
-  const digest = trimOrNull(req.get(DIGEST_HEADER));
-  if (!hasText(authorization) || !hasText(digest)) {
+function extractBindingValue(req, bindingHeaders) {
+  if (bindingHeaders.length === 0) {
     return null;
   }
-  return authorization + digest;
+
+  const values = [];
+  for (const header of bindingHeaders) {
+    const value = trimOrNull(req.get(header));
+    if (!hasText(value)) {
+      return null;
+    }
+    values.push(value);
+  }
+
+  if (values.length === 0) {
+    return null;
+  }
+
+  return values.join('');
 }
 
-function needsBindingCheck(path) {
-  return path === '/token-binding' || path === '/token-double-binding';
+function bindingHeadersFor(path) {
+  if (path === '/token-binding') {
+    return [AUTH_HEADER];
+  }
+  if (path === '/token-double-binding') {
+    return [AUTH_HEADER, SESSION_ID_HEADER];
+  }
+  return [];
+}
+
+function requiredHeadersFor(path, approovState, bindingState) {
+  if (!PROTECTED_PATHS.has(path) || !approovState) {
+    return [];
+  }
+
+  const headers = [APPROOV_HEADER];
+  if (bindingState) {
+    headers.push(...bindingHeadersFor(path));
+  }
+  return headers;
 }
 
 function enableApproov() {
@@ -212,7 +271,8 @@ function infoPayload(details) {
 
 function loadApproovSecret() {
   const raw = process.env.APPROOV_BASE64URL_SECRET;
-  if (!hasText(raw)) {
+  if (!hasText(raw) || raw.trim() === REQUIRED_SECRET_PLACEHOLDER) {
+    console.error('[Approov] Required secret is not set');
     throw new Error('APPROOV_BASE64URL_SECRET environment variable is not set.');
   }
 
@@ -223,6 +283,7 @@ function loadApproovSecret() {
     }
     return decoded;
   } catch (err) {
+    console.error('[Approov] Required secret is invalid');
     throw new Error('APPROOV_BASE64URL_SECRET must be base64url encoded.');
   }
 }
@@ -231,16 +292,75 @@ function hashBase64(value) {
   return crypto.createHash('sha256').update(value, 'utf8').digest('base64');
 }
 
+function timingSafeEquals(expected, actual) {
+  const expectedBuffer = Buffer.from(expected, 'utf8');
+  const actualBuffer = Buffer.from(actual, 'utf8');
+  if (expectedBuffer.length !== actualBuffer.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(expectedBuffer, actualBuffer);
+}
+
 function unauthorized(res) {
   res.status(401).json({});
 }
 
 function logAuthFailure(err) {
   if (err instanceof ApproovAuthError) {
-    console.warn(`[Approov] ${err.message}`);
+    console.warn(`[Approov] ${err.code}: ${err.message}`);
     return;
   }
   console.warn('[Approov] Unexpected authentication error.', err);
+}
+
+function requestLoggingMiddleware(req, res, next) {
+  res.on('finish', () => {
+    if (res.statusCode !== 200 && res.statusCode !== 401) {
+      return;
+    }
+
+    const summary = typeof req.approovSummary === 'string'
+      ? req.approovSummary
+      : res.statusCode === 401
+        ? 'approov_failed:unauthorized'
+        : 'request_completed';
+    const requiredHeaders = Array.isArray(req.approovRequiredHeaders)
+      ? req.approovRequiredHeaders
+      : requiredHeadersFor(req.path, approovEnabled, tokenBindingEnabled);
+    logRequestCompleted(req, res, summary, requiredHeaders);
+  });
+
+  next();
+}
+
+function logRequestCompleted(req, res, summary, requiredHeaders) {
+  const payload = {
+    summary,
+    method: req.method,
+    path: req.path,
+    status: res.statusCode,
+    ip: req.ip,
+    port: req.socket?.localPort ?? PORT,
+    approovEnabled,
+    tokenBindingEnabled,
+    required_headers: requiredHeaders,
+  };
+  console.log(`[${formatTimestamp(new Date())}] http.request.completed ${JSON.stringify(payload)}`);
+}
+
+function formatTimestamp(date) {
+  const pad = (value) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(
+    date.getHours()
+  )}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
+
+function setApproovFailureSummary(req, err) {
+  if (err instanceof ApproovAuthError && hasText(err.code)) {
+    req.approovSummary = `approov_failed:${err.code}`;
+    return;
+  }
+  req.approovSummary = 'approov_failed:unexpected_error';
 }
 
 function hasText(value) {
@@ -257,8 +377,9 @@ function parsePort(value, fallback) {
 }
 
 class ApproovAuthError extends Error {
-  constructor(message) {
+  constructor(code, message) {
     super(message);
     this.name = 'ApproovAuthError';
+    this.code = code;
   }
 }
