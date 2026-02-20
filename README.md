@@ -7,22 +7,23 @@ This project provides a server-side example of Approov token verification for a 
 - `/token-binding` - requires a valid Approov token which is bound to a header value.
 - `/token-double-binding` - requires a valid Approov token which is bound to two header values.
 
-In this example, Approov token check is implemented in `ApproovApplication.js`. The responsibilities break down as follows:
+In this example, Approov token checks are implemented in `ApproovApplication.js`. The responsibilities break down as follows:
 
-1. **JWT Approov Token validation (signature + expiry)** is implemented in [verifyApproovToken](https://github.com/approov/quickstart-nodejs-express-token-check/blob/refactor/nodejs-express-quickstart/ApproovApplication.js#L162-L193)
-It verifies the HS256 signature (via `jwt.verify`) and rejects tokens that are missing or past `exp`.
+1. **JWT Approov token validation (signature + expiry)** is in [verifyApproovToken](https://github.com/approov/quickstart-nodejs-express-token-check/blob/refactor/nodejs-express-quickstart/ApproovApplication.js#L167-L197).  
+It verifies the HS256 signature (via `jwt.verify`) and rejects tokens that are missing, lack `exp`, or are past `exp`.
 
-2. **Token binding (pay + hash)** is handled by [isBindingValid](https://github.com/approov/quickstart-nodejs-express-token-check/blob/refactor/nodejs-express-quickstart/ApproovApplication.js#L195-L203) and [hashBase64](ApproovApplication.js#L291-L293)
+2. **Token binding (`pay` + hash)** is handled by [isBindingValid](https://github.com/approov/quickstart-nodejs-express-token-check/blob/refactor/nodejs-express-quickstart/ApproovApplication.js#L199-L207) and [hashBase64](https://github.com/approov/quickstart-nodejs-express-token-check/blob/refactor/nodejs-express-quickstart/ApproovApplication.js#L311-L313).  
 It computes `base64(sha256(binding_value))` and compares it to `pay` using `timingSafeEquals`.
 
-3. **Middleware enforcement** is done by [approovAuthMiddleware](https://github.com/approov/quickstart-nodejs-express-token-check/blob/refactor/nodejs-express-quickstart/ApproovApplication.js#L111-L160)
-Requests without valid token/binding are rejected with 401.
+3. **Middleware enforcement** is done by [approovAuthMiddleware](https://github.com/approov/quickstart-nodejs-express-token-check/blob/refactor/nodejs-express-quickstart/ApproovApplication.js#L116-L164).  
+When Approov checks are enabled for a protected path, requests without valid token/binding are rejected with `401`.
 
-4. **Binding value selection (what gets hashed)** is in [extractBindingValue + bindingHeadersFor](https://github.com/approov/quickstart-nodejs-express-token-check/blob/refactor/nodejs-express-quickstart/ApproovApplication.js#L205-L234) It uses the headers configured in `bindingHeadersFor` (currently `Authorization` for single binding, or `Authorization` + `SessionId` for double binding).
+4. **Binding value selection (what gets hashed)** is in [extractBindingValue + bindingHeadersFor](https://github.com/approov/quickstart-nodejs-express-token-check/blob/refactor/nodejs-express-quickstart/ApproovApplication.js#L209-L238).  
+It uses the headers configured in `bindingHeadersFor` (currently `Authorization` for single binding, or `Authorization` + `SessionId` for double binding).
 
-5. **Protected route requirements** are defined in [PROTECTED_PATHS](https://github.com/approov/quickstart-nodejs-express-token-check/blob/refactor/nodejs-express-quickstart/ApproovApplication.js#L24-L29) and [requiredHeadersFor](https://github.com/approov/quickstart-nodejs-express-token-check/blob/refactor/nodejs-express-quickstart/ApproovApplication.js#L236-L246)
+5. **Protected route requirements** are defined in [PROTECTED_PATHS](https://github.com/approov/quickstart-nodejs-express-token-check/blob/refactor/nodejs-express-quickstart/ApproovApplication.js#L25-L29) and [requiredHeadersFor](https://github.com/approov/quickstart-nodejs-express-token-check/blob/refactor/nodejs-express-quickstart/ApproovApplication.js#L240-L250).
 
-6. **Protected routes are registered** in the Express route declarations ([app.get/app.post](https://github.com/approov/quickstart-nodejs-express-token-check/blob/refactor/nodejs-express-quickstart/ApproovApplication.js#L47-L97))
+6. **Protected routes are registered** in the Express route declarations [app.get/app.post](https://github.com/approov/quickstart-nodejs-express-token-check/blob/refactor/nodejs-express-quickstart/ApproovApplication.js#L49-L99).
 
 ## Approov Token Verification Flow
 
