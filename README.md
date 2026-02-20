@@ -239,8 +239,8 @@ curl -X GET http://localhost:8080/approov-state       # check current state
 
 **Environments where the quickstart was tested:**
 ```text
-* Runtime: Node.js v25.2.1
-* Framework: Koa 5.2.1
+* Runtime: Node.js v24.13.1
+* Framework: Express 5.2.1
 * Build Tool: npm 11.6.2
 ```
 

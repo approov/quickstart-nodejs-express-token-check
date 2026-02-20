@@ -11,7 +11,7 @@ if (envResult.error && envResult.error.code !== 'ENOENT') {
   throw new Error(`Failed to load .env: ${envResult.error.message}`);
 }
 
-const PORT = parsePort(process.env.PORT, 8080);
+const PORT = parsePort(process.env.HTTP_PORT, 8080);
 const APPROOV_HEADER = 'Approov-Token';
 const AUTH_HEADER = 'Authorization';
 const SESSION_ID_HEADER = 'SessionId';
@@ -39,13 +39,15 @@ const APPROOV_ERROR_CODES = {
 
 const app = express();
 app.disable('x-powered-by');
+app.enable('strict routing');
+app.enable('case sensitive routing');
 app.use(cors());
 
 app.use(requestLoggingMiddleware);
 app.use(approovAuthMiddleware);
 
 app.get('/', (req, res) => {
-  res.json(infoPayload('Approov demo API is running on port 8080.'));
+  res.json(infoPayload(`Approov demo API is running on port ${PORT}.`));
 });
 
 app.get('/approov-state', (req, res) => {
@@ -95,6 +97,8 @@ app.get('/token-double-binding', (req, res) => {
   payload.sessionIdHeaderPresent = hasText(sessionId);
   res.json(payload);
 });
+
+app.use(errorHandlingMiddleware);
 
 const server = app.listen(PORT, () => {
   console.log(`Approov demo API listening on port ${PORT}.`);
@@ -155,7 +159,7 @@ function approovAuthMiddleware(req, res, next) {
   } catch (err) {
     setApproovFailureSummary(req, err);
     logAuthFailure(err);
-    return unauthorized(res);
+    return next(authErrorFor(err));
   }
 }
 
@@ -276,16 +280,32 @@ function loadApproovSecret() {
     throw new Error('APPROOV_BASE64URL_SECRET environment variable is not set.');
   }
 
+  const encoded = raw.trim();
   try {
-    const decoded = Buffer.from(raw.trim(), 'base64url');
-    if (decoded.length === 0) {
-      throw new Error('APPROOV_BASE64URL_SECRET decoded to an empty value.');
-    }
-    return decoded;
+    return decodeBase64UrlSecret(encoded);
   } catch (err) {
     console.error('[Approov] Required secret is invalid');
-    throw new Error('APPROOV_BASE64URL_SECRET must be base64url encoded.');
+    throw new Error('APPROOV_BASE64URL_SECRET must be a non-empty, valid base64url string.');
   }
+}
+
+function decodeBase64UrlSecret(encoded) {
+  if (!/^[A-Za-z0-9_-]+={0,2}$/.test(encoded)) {
+    throw new Error('APPROOV_BASE64URL_SECRET contains invalid characters.');
+  }
+
+  const decoded = Buffer.from(encoded, 'base64url');
+  if (decoded.length === 0) {
+    throw new Error('APPROOV_BASE64URL_SECRET decoded to an empty value.');
+  }
+
+  const normalizedInput = encoded.replace(/=+$/, '');
+  const canonical = decoded.toString('base64url');
+  if (canonical !== normalizedInput) {
+    throw new Error('APPROOV_BASE64URL_SECRET is not canonical base64url.');
+  }
+
+  return decoded;
 }
 
 function hashBase64(value) {
@@ -301,16 +321,32 @@ function timingSafeEquals(expected, actual) {
   return crypto.timingSafeEqual(expectedBuffer, actualBuffer);
 }
 
-function unauthorized(res) {
-  res.status(401).json({});
-}
-
 function logAuthFailure(err) {
   if (err instanceof ApproovAuthError) {
     console.warn(`[Approov] ${err.code}: ${err.message}`);
     return;
   }
   console.warn('[Approov] Unexpected authentication error.', err);
+}
+
+function authErrorFor(err) {
+  if (err instanceof ApproovAuthError) {
+    return new HttpError(401, err.code, 'Unauthorized.');
+  }
+  return new HttpError(401, 'unexpected_auth_error', 'Unauthorized.');
+}
+
+function errorHandlingMiddleware(err, req, res, next) {
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  if (err instanceof HttpError) {
+    return res.status(err.status).json({ error: err.code });
+  }
+
+  console.error('[Approov] Unhandled server error.', err);
+  return res.status(500).json({ error: 'internal_server_error' });
 }
 
 function requestLoggingMiddleware(req, res, next) {
@@ -380,6 +416,15 @@ class ApproovAuthError extends Error {
   constructor(code, message) {
     super(message);
     this.name = 'ApproovAuthError';
+    this.code = code;
+  }
+}
+
+class HttpError extends Error {
+  constructor(status, code, message) {
+    super(message);
+    this.name = 'HttpError';
+    this.status = status;
     this.code = code;
   }
 }
