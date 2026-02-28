@@ -1,0 +1,20 @@
+{
+  "name": "approov-quickstart-node-express",
+  "version": "1.0.0",
+  "description": "Approov token check quickstart for a Node.js Express backend.",
+  "main": "ApproovApplication.js",
+  "scripts": {
+    "start": "node ApproovApplication.js",
+    "dev": "node --watch-path=ApproovApplication.js ApproovApplication.js"
+  },
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "license": "Apache-2.0",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3"
+  }
+}
